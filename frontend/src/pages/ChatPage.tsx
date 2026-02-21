@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/hooks/useAuth'
 import { createThread } from '@/lib/api'
-import logoSvg from '/logo.svg'
 
 export function ChatPage() {
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null)
@@ -60,7 +59,7 @@ export function ChatPage() {
       {/* Sidebar */}
       <div className="flex w-64 flex-col border-r bg-muted/30">
         <div className="border-b p-4">
-          <img src={logoSvg} alt="Logo" className="h-8" />
+          <h1 className="text-lg font-semibold tracking-tight">Agentic Chat & Ingestion</h1>
         </div>
         <nav className="border-b p-2">
           <div className="flex gap-1">

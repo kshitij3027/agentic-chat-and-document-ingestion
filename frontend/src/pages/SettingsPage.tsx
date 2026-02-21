@@ -6,7 +6,6 @@ import { Input } from '@/components/ui/input'
 import { UserMenu } from '@/components/UserMenu'
 import { useAuth } from '@/hooks/useAuth'
 import { getSettings, updateSettings, type GlobalSettings, type GlobalSettingsUpdate } from '@/lib/api'
-import logoSvg from '/logo.svg'
 
 export function SettingsPage() {
   const { user, signOut, isAdmin, loading: authLoading } = useAuth()
@@ -111,7 +110,7 @@ export function SettingsPage() {
       {/* Sidebar */}
       <div className="flex w-64 flex-col border-r bg-muted/30">
         <div className="border-b p-4">
-          <img src={logoSvg} alt="Logo" className="h-8" />
+          <h1 className="text-lg font-semibold tracking-tight">Agentic Chat & Ingestion</h1>
         </div>
         <nav className="border-b p-2">
           <div className="flex gap-1">
