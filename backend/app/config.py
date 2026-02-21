@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     # LangSmith
     langsmith_api_key: str = ""
     langsmith_project: str = "rag-masterclass"
+    langsmith_endpoint: str = "https://api.smith.langchain.com"
 
     # Encryption
     settings_encryption_key: str = ""

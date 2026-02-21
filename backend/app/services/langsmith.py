@@ -12,7 +12,7 @@ if settings.langsmith_api_key:
     os.environ["LANGSMITH_TRACING"] = "true"
     os.environ["LANGSMITH_API_KEY"] = settings.langsmith_api_key
     os.environ["LANGSMITH_PROJECT"] = settings.langsmith_project
-    os.environ["LANGSMITH_ENDPOINT"] = "https://eu.api.smith.langchain.com"
+    os.environ["LANGSMITH_ENDPOINT"] = settings.langsmith_endpoint
 else:
     logger.warning("LangSmith API key not configured - tracing disabled")
 
@@ -36,10 +36,9 @@ def get_traced_openai_client(base_url: str | None = None, api_key: str | None = 
 
     Args:
         base_url: Optional base URL for the API (e.g., OpenRouter, Ollama)
-        api_key: Optional API key (falls back to openai_api_key)
+        api_key: Optional API key
     """
-    effective_key = api_key or settings.openai_api_key
-    client = OpenAI(api_key=effective_key, base_url=base_url or None)
+    client = OpenAI(api_key=api_key, base_url=base_url or None)
 
     if settings.langsmith_api_key:
         wrapped = wrap_openai(client)
@@ -55,10 +54,9 @@ def get_traced_async_openai_client(base_url: str | None = None, api_key: str | N
 
     Args:
         base_url: Optional base URL for the API (e.g., OpenRouter, Ollama)
-        api_key: Optional API key (falls back to openai_api_key)
+        api_key: Optional API key
     """
-    effective_key = api_key or settings.openai_api_key
-    client = AsyncOpenAI(api_key=effective_key, base_url=base_url or None)
+    client = AsyncOpenAI(api_key=api_key, base_url=base_url or None)
 
     if settings.langsmith_api_key:
         wrapped = wrap_openai(client)
