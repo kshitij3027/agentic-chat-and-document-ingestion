@@ -157,7 +157,12 @@ export async function sendMessage(options: SendMessageOptions): Promise<void> {
 }
 
 // Documents API
-export async function uploadDocument(file: File): Promise<Document> {
+export interface UploadDocumentResult extends Document {
+  skipped?: boolean
+  skip_reason?: string
+}
+
+export async function uploadDocument(file: File): Promise<UploadDocumentResult> {
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) {
     throw new Error('Not authenticated')

@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { uploadDocument } from '@/lib/api'
+import { uploadDocument, type UploadDocumentResult } from '@/lib/api'
 
 const ALLOWED_EXTENSIONS = ['.txt', '.md']
 
@@ -11,6 +11,7 @@ export function DocumentUpload({ onUploadComplete }: DocumentUploadProps) {
   const [isDragging, setIsDragging] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [info, setInfo] = useState<string | null>(null)
 
   const validateFile = (file: File): string | null => {
     const ext = '.' + file.name.split('.').pop()?.toLowerCase()
@@ -25,6 +26,7 @@ export function DocumentUpload({ onUploadComplete }: DocumentUploadProps) {
 
   const handleUpload = async (files: FileList | File[]) => {
     setError(null)
+    setInfo(null)
     const fileArray = Array.from(files)
 
     for (const file of fileArray) {
@@ -37,8 +39,15 @@ export function DocumentUpload({ onUploadComplete }: DocumentUploadProps) {
 
     setUploading(true)
     try {
+      const skippedFiles: string[] = []
       for (const file of fileArray) {
-        await uploadDocument(file)
+        const result: UploadDocumentResult = await uploadDocument(file)
+        if (result.skipped) {
+          skippedFiles.push(file.name)
+        }
+      }
+      if (skippedFiles.length > 0) {
+        setInfo(`"${skippedFiles.join('", "')}" is unchanged — skipped re-processing.`)
       }
       onUploadComplete()
     } catch (err) {
@@ -105,6 +114,10 @@ export function DocumentUpload({ onUploadComplete }: DocumentUploadProps) {
 
       {error && (
         <p className="text-sm text-destructive">{error}</p>
+      )}
+
+      {info && (
+        <p className="text-sm text-blue-600">{info}</p>
       )}
     </div>
   )

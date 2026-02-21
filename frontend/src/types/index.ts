@@ -24,6 +24,7 @@ export interface Document {
   file_size: number
   storage_path: string
   status: 'pending' | 'processing' | 'completed' | 'failed'
+  content_hash: string | null
   error_message: string | null
   chunk_count: number
   created_at: string
