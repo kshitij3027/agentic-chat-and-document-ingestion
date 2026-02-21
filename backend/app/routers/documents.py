@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Backgro
 from app.dependencies import get_current_user, User
 from app.db.supabase import get_supabase_client
 from app.services.ingestion_service import process_document
+from app.services.record_manager import hash_content, find_existing_document
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -57,8 +58,57 @@ async def upload_document(
         content_type = "text/plain"
 
     supabase = get_supabase_client()
+    content_hash = hash_content(content)
 
-    # Upload to Supabase Storage
+    # Check for existing document with same user + filename
+    existing = find_existing_document(current_user.id, filename)
+
+    if existing:
+        # Reject if the existing document is still being processed
+        if existing["status"] in ("pending", "processing"):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="This document is currently being processed. Please wait."
+            )
+
+        # Identical content — skip re-processing
+        if existing.get("content_hash") == content_hash:
+            return {**existing, "skipped": True, "skip_reason": "Content unchanged"}
+
+        # Changed content — replace: delete old chunks, replace storage file, re-process
+        try:
+            supabase.storage.from_("documents").remove([existing["storage_path"]])
+        except Exception:
+            pass  # Old storage file may already be gone
+
+        # Delete old chunks
+        supabase.table("chunks").delete().eq("document_id", existing["id"]).execute()
+
+        # Upload new file to storage
+        file_id = str(uuid.uuid4())
+        storage_path = f"{current_user.id}/{file_id}{ext}"
+        supabase.storage.from_("documents").upload(
+            path=storage_path,
+            file=content,
+            file_options={"content-type": content_type},
+        )
+
+        # Update the existing document record
+        result = supabase.table("documents").update({
+            "file_type": content_type,
+            "file_size": len(content),
+            "storage_path": storage_path,
+            "content_hash": content_hash,
+            "status": "pending",
+            "error_message": None,
+            "chunk_count": 0,
+        }).eq("id", existing["id"]).execute()
+
+        document = result.data[0]
+        background_tasks.add_task(process_document, document["id"], current_user.id)
+        return document
+
+    # New document — original flow with content_hash
     file_id = str(uuid.uuid4())
     storage_path = f"{current_user.id}/{file_id}{ext}"
 
@@ -68,13 +118,13 @@ async def upload_document(
         file_options={"content-type": content_type},
     )
 
-    # Create document record
     doc_record = {
         "user_id": current_user.id,
         "filename": filename,
         "file_type": content_type,
         "file_size": len(content),
         "storage_path": storage_path,
+        "content_hash": content_hash,
         "status": "pending",
     }
 

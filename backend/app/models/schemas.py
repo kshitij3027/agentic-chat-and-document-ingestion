@@ -39,6 +39,7 @@ class DocumentResponse(BaseModel):
     file_size: int
     storage_path: str
     status: str
+    content_hash: str | None = None
     error_message: str | None = None
     chunk_count: int = 0
     created_at: datetime
