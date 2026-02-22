@@ -25,8 +25,11 @@ export function SettingsPage() {
   const [embeddingBaseUrl, setEmbeddingBaseUrl] = useState('')
   const [embeddingApiKey, setEmbeddingApiKey] = useState('')
   const [embeddingDimensions, setEmbeddingDimensions] = useState('')
+  const [rerankerModel, setRerankerModel] = useState('')
+  const [rerankerApiKey, setRerankerApiKey] = useState('')
   const [showLlmKey, setShowLlmKey] = useState(false)
   const [showEmbeddingKey, setShowEmbeddingKey] = useState(false)
+  const [showRerankerKey, setShowRerankerKey] = useState(false)
 
   // Redirect non-admins to home (wait for loading to complete first)
   useEffect(() => {
@@ -53,6 +56,8 @@ export function SettingsPage() {
       setEmbeddingBaseUrl(settings.embedding_base_url || '')
       setEmbeddingApiKey(settings.embedding_api_key || '')
       setEmbeddingDimensions(settings.embedding_dimensions?.toString() || '')
+      setRerankerModel(settings.reranker_model || '')
+      setRerankerApiKey(settings.reranker_api_key || '')
       setHasChunks(settings.has_chunks)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load settings')
@@ -74,6 +79,8 @@ export function SettingsPage() {
         embedding_base_url: embeddingBaseUrl || null,
         embedding_api_key: embeddingApiKey || null,
         embedding_dimensions: embeddingDimensions ? parseInt(embeddingDimensions, 10) : null,
+        reranker_model: rerankerModel || null,
+        reranker_api_key: rerankerApiKey || null,
       }
       await updateSettings(update)
       setSuccess(true)
@@ -284,6 +291,51 @@ export function SettingsPage() {
                       onChange={(e) => setEmbeddingDimensions(e.target.value)}
                       disabled={hasChunks}
                     />
+                  </div>
+                </div>
+              </div>
+
+              {/* Divider */}
+              <div className="border-t" />
+
+              {/* Reranker Configuration */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium text-foreground">Reranker Configuration</h3>
+                <p className="text-xs text-muted-foreground">
+                  Optional. Configure a Cohere reranker to improve search result relevance.
+                </p>
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <label className="text-xs text-muted-foreground">Model Name</label>
+                    <Input
+                      name="reranker-model-field"
+                      autoComplete="off"
+                      placeholder="e.g., rerank-v3.5"
+                      value={rerankerModel}
+                      onChange={(e) => setRerankerModel(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs text-muted-foreground">API Key</label>
+                    <div className="relative">
+                      <Input
+                        name="reranker-key-field"
+                        type={showRerankerKey ? 'text' : 'password'}
+                        autoComplete="off"
+                        placeholder="Enter Cohere API key"
+                        value={rerankerApiKey}
+                        onChange={(e) => setRerankerApiKey(e.target.value)}
+                        className="pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowRerankerKey(!showRerankerKey)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        tabIndex={-1}
+                      >
+                        {showRerankerKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

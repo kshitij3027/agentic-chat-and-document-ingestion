@@ -50,6 +50,8 @@ class GlobalSettingsResponse(BaseModel):
     embedding_base_url: str | None = None
     embedding_api_key: str | None = None
     embedding_dimensions: int | None = None
+    reranker_api_key: str | None = None
+    reranker_model: str | None = None
     has_chunks: bool = False
 
 
@@ -61,6 +63,8 @@ class GlobalSettingsUpdate(BaseModel):
     embedding_base_url: str | None = None
     embedding_api_key: str | None = None
     embedding_dimensions: int | None = None
+    reranker_api_key: str | None = None
+    reranker_model: str | None = None
 
 
 def mask_api_key(key: str | None) -> str | None:
@@ -113,6 +117,8 @@ async def get_settings(current_user: User = Depends(get_current_user)):
         embedding_base_url=data.get("embedding_base_url"),
         embedding_api_key=mask_api_key(decrypt_value(data.get("embedding_api_key"))),
         embedding_dimensions=data.get("embedding_dimensions"),
+        reranker_api_key=mask_api_key(decrypt_value(data.get("reranker_api_key"))),
+        reranker_model=data.get("reranker_model"),
         has_chunks=has_chunks,
     )
 
@@ -170,6 +176,10 @@ async def update_settings(
         update_data["embedding_api_key"] = encrypt_value(settings_data.embedding_api_key) if settings_data.embedding_api_key else None
     if settings_data.embedding_dimensions is not None:
         update_data["embedding_dimensions"] = settings_data.embedding_dimensions or None
+    if settings_data.reranker_api_key is not None and not is_masked_value(settings_data.reranker_api_key):
+        update_data["reranker_api_key"] = encrypt_value(settings_data.reranker_api_key) if settings_data.reranker_api_key else None
+    if settings_data.reranker_model is not None:
+        update_data["reranker_model"] = settings_data.reranker_model or None
 
     if not update_data:
         # Nothing to update, return current state
@@ -182,6 +192,8 @@ async def update_settings(
             embedding_base_url=data.get("embedding_base_url") if data else None,
             embedding_api_key=mask_api_key(decrypt_value(data.get("embedding_api_key"))) if data else None,
             embedding_dimensions=data.get("embedding_dimensions") if data else None,
+            reranker_api_key=mask_api_key(decrypt_value(data.get("reranker_api_key"))) if data else None,
+            reranker_model=data.get("reranker_model") if data else None,
             has_chunks=has_chunks,
         )
 
@@ -212,5 +224,7 @@ async def update_settings(
         embedding_base_url=saved.get("embedding_base_url"),
         embedding_api_key=mask_api_key(decrypt_value(saved.get("embedding_api_key"))),
         embedding_dimensions=saved.get("embedding_dimensions"),
+        reranker_api_key=mask_api_key(decrypt_value(saved.get("reranker_api_key"))),
+        reranker_model=saved.get("reranker_model"),
         has_chunks=has_chunks,
     )
