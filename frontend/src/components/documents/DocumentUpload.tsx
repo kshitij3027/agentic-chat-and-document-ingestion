@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import { uploadDocument, type UploadDocumentResult } from '@/lib/api'
 
-const ALLOWED_EXTENSIONS = ['.txt', '.md']
+const ALLOWED_EXTENSIONS = ['.txt', '.md', '.pdf', '.docx', '.html', '.htm']
 
 interface DocumentUploadProps {
   onUploadComplete: () => void
@@ -98,7 +98,7 @@ export function DocumentUpload({ onUploadComplete }: DocumentUploadProps) {
           id="file-upload"
           type="file"
           className="hidden"
-          accept=".txt,.md"
+          accept=".txt,.md,.pdf,.docx,.html,.htm"
           multiple
           onChange={handleFileInput}
         />
@@ -107,7 +107,7 @@ export function DocumentUpload({ onUploadComplete }: DocumentUploadProps) {
             {uploading ? 'Uploading...' : 'Drop files here or click to upload'}
           </p>
           <p className="text-xs text-muted-foreground">
-            Supported: .txt, .md (max 10 MB)
+            Supported: .txt, .md, .pdf, .docx, .html (max 10 MB)
           </p>
         </div>
       </div>
