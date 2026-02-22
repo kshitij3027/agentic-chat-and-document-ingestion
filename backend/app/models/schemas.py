@@ -40,6 +40,7 @@ class DocumentResponse(BaseModel):
     storage_path: str
     status: str
     content_hash: str | None = None
+    metadata: dict | None = None
     error_message: str | None = None
     chunk_count: int = 0
     created_at: datetime

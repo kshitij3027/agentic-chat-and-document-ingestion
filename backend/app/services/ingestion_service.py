@@ -3,6 +3,7 @@ import logging
 from app.db.supabase import get_supabase_client
 from app.services.chunking_service import chunk_text
 from app.services.embedding_service import get_embeddings
+from app.services.metadata_service import extract_metadata
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +41,13 @@ async def process_document(document_id: str, user_id: str) -> None:
         if not text.strip():
             raise ValueError("No text content extracted from document")
 
+        # Extract metadata (graceful degradation — None on failure)
+        doc_metadata = await extract_metadata(text, doc["filename"], user_id)
+        if doc_metadata:
+            supabase.table("documents").update({
+                "metadata": doc_metadata.model_dump(),
+            }).eq("id", document_id).execute()
+
         # Chunk the text
         chunks = chunk_text(text)
 
@@ -55,16 +63,22 @@ async def process_document(document_id: str, user_id: str) -> None:
             # Insert chunks with embeddings
             chunk_records = []
             for j, (chunk_content, embedding) in enumerate(zip(batch, embeddings)):
+                chunk_meta = {
+                    "filename": doc["filename"],
+                    "chunk_index": i + j,
+                }
+                if doc_metadata:
+                    chunk_meta["topic"] = doc_metadata.topic
+                    chunk_meta["document_type"] = doc_metadata.document_type
+                    chunk_meta["key_entities"] = doc_metadata.key_entities
+
                 chunk_records.append({
                     "document_id": document_id,
                     "user_id": user_id,
                     "content": chunk_content,
                     "chunk_index": i + j,
                     "embedding": embedding,
-                    "metadata": {
-                        "filename": doc["filename"],
-                        "chunk_index": i + j,
-                    },
+                    "metadata": chunk_meta,
                 })
 
             supabase.table("chunks").insert(chunk_records).execute()

@@ -102,6 +102,7 @@ async def upload_document(
             "status": "pending",
             "error_message": None,
             "chunk_count": 0,
+            "metadata": None,
         }).eq("id", existing["id"]).execute()
 
         document = result.data[0]
