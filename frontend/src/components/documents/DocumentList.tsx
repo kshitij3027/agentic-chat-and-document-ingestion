@@ -84,6 +84,29 @@ export function DocumentList({ documents, loading }: DocumentListProps) {
                 </span>
               )}
             </div>
+            {doc.status === 'completed' && doc.metadata && (
+              <div className="mt-2 space-y-1">
+                <div className="flex flex-wrap gap-1.5">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                    {doc.metadata.document_type.replace(/_/g, ' ')}
+                  </span>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                    {doc.metadata.topic}
+                  </span>
+                  {doc.metadata.key_entities.slice(0, 3).map((entity) => (
+                    <span
+                      key={entity}
+                      className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700"
+                    >
+                      {entity}
+                    </span>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground line-clamp-2">
+                  {doc.metadata.summary}
+                </p>
+              </div>
+            )}
           </div>
           <Button
             variant="ghost"

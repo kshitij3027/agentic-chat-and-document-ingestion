@@ -16,6 +16,14 @@ export interface Message {
   created_at: string
 }
 
+export interface DocumentMetadata {
+  topic: string
+  document_type: string
+  summary: string
+  key_entities: string[]
+  language: string
+}
+
 export interface Document {
   id: string
   user_id: string
@@ -25,6 +33,7 @@ export interface Document {
   storage_path: string
   status: 'pending' | 'processing' | 'completed' | 'failed'
   content_hash: string | null
+  metadata: DocumentMetadata | null
   error_message: string | null
   chunk_count: number
   created_at: string
