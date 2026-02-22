@@ -51,9 +51,16 @@ async def execute_tool_call(tool_call: dict, user_id: str) -> dict:
         # Format results for LLM context
         formatted = []
         for r in results:
+            # Pick best available score: relevance (reranker) > rrf > similarity
+            if "relevance_score" in r:
+                score_label = f"relevance: {r['relevance_score']:.3f}"
+            elif "rrf_score" in r:
+                score_label = f"score: {r['rrf_score']:.4f}"
+            else:
+                score_label = f"similarity: {r['similarity']:.2f}"
             formatted.append(
                 f"[Source: {r.get('metadata', {}).get('filename', 'unknown')}] "
-                f"(similarity: {r['similarity']:.2f})\n{r['content']}"
+                f"({score_label})\n{r['content']}"
             )
 
         return {"text": "\n\n---\n\n".join(formatted), "sources": sources}
