@@ -80,13 +80,14 @@ export interface SendMessageOptions {
   threadId: string
   content: string
   onTextDelta: (text: string) => void
+  onSources?: (sources: Array<{filename: string, document_id: string}>) => void
   onDone: () => void
   onError: (error: string) => void
   signal?: AbortSignal
 }
 
 export async function sendMessage(options: SendMessageOptions): Promise<void> {
-  const { threadId, content, onTextDelta, onDone, onError, signal } = options
+  const { threadId, content, onTextDelta, onSources, onDone, onError, signal } = options
 
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) {
@@ -127,10 +128,11 @@ export async function sendMessage(options: SendMessageOptions): Promise<void> {
       const lines = buffer.split('\n')
       buffer = lines.pop() || ''
 
+      let currentEventType = ''
       for (const line of lines) {
         if (line.startsWith('event: ')) {
-          const eventType = line.slice(7).trim()
-          if (eventType === 'done') {
+          currentEventType = line.slice(7).trim()
+          if (currentEventType === 'done') {
             onDone()
           }
           continue
@@ -139,7 +141,9 @@ export async function sendMessage(options: SendMessageOptions): Promise<void> {
           const data = line.slice(6)
           try {
             const parsed = JSON.parse(data)
-            if (parsed.content) {
+            if (currentEventType === 'sources' && parsed.sources && onSources) {
+              onSources(parsed.sources)
+            } else if (parsed.content) {
               onTextDelta(parsed.content)
             }
             if (parsed.error) {
@@ -148,6 +152,7 @@ export async function sendMessage(options: SendMessageOptions): Promise<void> {
           } catch {
             // Ignore parse errors
           }
+          currentEventType = ''
         }
       }
     }

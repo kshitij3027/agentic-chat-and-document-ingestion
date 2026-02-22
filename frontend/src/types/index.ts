@@ -6,6 +6,11 @@ export interface Thread {
   updated_at: string
 }
 
+export interface MessageSource {
+  filename: string
+  document_id: string
+}
+
 export interface Message {
   id: string
   thread_id: string
@@ -13,6 +18,7 @@ export interface Message {
   openai_message_id: string | null
   role: 'user' | 'assistant'
   content: string
+  sources?: MessageSource[] | null
   created_at: string
 }
 

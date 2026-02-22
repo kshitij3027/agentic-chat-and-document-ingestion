@@ -45,6 +45,7 @@ backend/=0.0.6
 # Testing & QA (contains test credentials)
 verification/
 screenshots/
+test_data/
 
 # Claude Code
 CLAUDE.md

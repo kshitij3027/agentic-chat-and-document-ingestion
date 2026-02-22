@@ -28,6 +28,7 @@ class MessageResponse(BaseModel):
     user_id: str
     role: str
     content: str
+    sources: list[dict] | None = None
     created_at: datetime
 
 

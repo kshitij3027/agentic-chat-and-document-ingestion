@@ -1,6 +1,4 @@
 """Vector search via match_chunks RPC."""
-import json
-
 from app.db.supabase import get_supabase_client
 from app.services.embedding_service import get_embeddings
 
@@ -9,7 +7,7 @@ async def search_documents(
     query: str,
     user_id: str,
     top_k: int = 5,
-    threshold: float = 0.5,
+    threshold: float = 0.3,
     metadata_filter: dict | None = None,
 ) -> list[dict]:
     """
@@ -27,15 +25,19 @@ async def search_documents(
     """
     query_embedding = await get_embeddings([query], user_id=user_id)
 
+    # Convert embedding list to pgvector string format "[0.1,0.2,...]"
+    # PostgREST cannot cast a JSON array to the pgvector `vector` type directly.
+    embedding_str = "[" + ",".join(str(x) for x in query_embedding[0]) + "]"
+
     supabase = get_supabase_client()
     rpc_params = {
-        "query_embedding": query_embedding[0],
+        "query_embedding": embedding_str,
         "match_threshold": threshold,
         "match_count": top_k,
         "p_user_id": user_id,
     }
     if metadata_filter:
-        rpc_params["p_metadata_filter"] = json.dumps(metadata_filter)
+        rpc_params["p_metadata_filter"] = metadata_filter
 
     result = supabase.rpc("match_chunks", rpc_params).execute()
 

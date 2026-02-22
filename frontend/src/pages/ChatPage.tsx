@@ -90,6 +90,7 @@ export function ChatPage() {
       <div className="flex-1">
         {selectedThreadId ? (
           <ChatView
+            key={selectedThreadId}
             threadId={selectedThreadId}
             onThreadTitleUpdate={handleThreadTitleUpdate}
             initialMessage={initialMessage}

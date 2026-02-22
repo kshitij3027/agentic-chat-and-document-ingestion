@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
-import { Send, Square, Loader2 } from 'lucide-react'
+import { Send, Square, Loader2, FileText } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { getMessages, sendMessage, updateThread } from '@/lib/api'
-import type { Message } from '@/types'
+import type { Message, MessageSource } from '@/types'
 
 interface ChatViewProps {
   threadId: string
@@ -20,6 +20,7 @@ export function ChatView({ threadId, onThreadTitleUpdate, initialMessage }: Chat
   const [sending, setSending] = useState(false)
   const [waiting, setWaiting] = useState(false)
   const [streamingContent, setStreamingContent] = useState('')
+  const [streamingSources, setStreamingSources] = useState<MessageSource[]>([])
   const [error, setError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
@@ -66,6 +67,7 @@ export function ChatView({ threadId, onThreadTitleUpdate, initialMessage }: Chat
     setSending(true)
     setWaiting(true)
     setStreamingContent('')
+    setStreamingSources([])
     setError(null)
 
     abortControllerRef.current = new AbortController()
@@ -100,6 +102,9 @@ export function ChatView({ threadId, onThreadTitleUpdate, initialMessage }: Chat
         onTextDelta: (text) => {
           setWaiting(false)
           setStreamingContent(prev => prev + text)
+        },
+        onSources: (sources) => {
+          setStreamingSources(sources)
         },
         onDone: () => {
           setSending(false)
@@ -162,12 +167,14 @@ export function ChatView({ threadId, onThreadTitleUpdate, initialMessage }: Chat
           openai_message_id: null,
           role: 'assistant',
           content: streamingContent,
+          sources: streamingSources.length > 0 ? streamingSources : null,
           created_at: new Date().toISOString(),
         } as Message,
       ])
       setStreamingContent('')
+      setStreamingSources([])
     }
-  }, [sending, streamingContent, threadId])
+  }, [sending, streamingContent, threadId, streamingSources])
 
   if (loading) {
     return (
@@ -199,10 +206,25 @@ export function ChatView({ threadId, onThreadTitleUpdate, initialMessage }: Chat
                       </div>
                     </div>
                   ) : (
-                    <div className="prose prose-neutral dark:prose-invert max-w-none">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                        {message.content}
-                      </ReactMarkdown>
+                    <div>
+                      <div className="prose prose-neutral dark:prose-invert max-w-none">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          {message.content}
+                        </ReactMarkdown>
+                      </div>
+                      {message.sources && message.sources.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {message.sources.map((src) => (
+                            <span
+                              key={src.document_id}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground"
+                            >
+                              <FileText className="h-3 w-3" />
+                              {src.filename}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -218,10 +240,25 @@ export function ChatView({ threadId, onThreadTitleUpdate, initialMessage }: Chat
 
               {/* Streaming message */}
               {streamingContent && (
-                <div className="prose prose-neutral dark:prose-invert max-w-none">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {streamingContent}
-                  </ReactMarkdown>
+                <div>
+                  <div className="prose prose-neutral dark:prose-invert max-w-none">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {streamingContent}
+                    </ReactMarkdown>
+                  </div>
+                  {streamingSources.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {streamingSources.map((src) => (
+                        <span
+                          key={src.document_id}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground"
+                        >
+                          <FileText className="h-3 w-3" />
+                          {src.filename}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 

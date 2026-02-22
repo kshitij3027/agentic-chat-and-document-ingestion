@@ -13,9 +13,11 @@ You can answer questions and help users with their queries.
 When relevant, search through the uploaded documents to provide accurate information.
 Always cite your sources when using information from documents.
 
-When the user asks about a specific type of document (e.g., "my meeting notes", "the tutorial", "that report"),
-use the document_type filter to narrow the search. When they mention a specific topic, use the topic filter.
-Available document types: meeting_notes, technical_doc, tutorial, report, email, notes, article, other."""
+You have optional filters on the search tool: document_type and topic. ONLY use them when the user
+explicitly names a document type (e.g., "search my meeting notes", "look in my tutorials", "check my reports").
+For general questions like "what do my documents say about X", do NOT use filters — let vector similarity
+find the best matches across all documents.
+Available document_type values: meeting_notes, technical_doc, tutorial, report, email, notes, article, other."""
 
 RAG_TOOLS = [{
     "type": "function",

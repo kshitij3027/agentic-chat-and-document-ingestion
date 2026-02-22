@@ -6,16 +6,16 @@ from app.services.retrieval_service import search_documents
 logger = logging.getLogger(__name__)
 
 
-async def execute_tool_call(tool_call: dict, user_id: str) -> str:
+async def execute_tool_call(tool_call: dict, user_id: str) -> dict:
     """
-    Execute a tool call and return the result as a string.
+    Execute a tool call and return text for the LLM plus source metadata.
 
     Args:
         tool_call: Dict with 'name' and 'arguments' keys
         user_id: The user's ID for context
 
     Returns:
-        Tool result as a string
+        Dict with 'text' (str for LLM) and 'sources' (list of source docs)
     """
     name = tool_call["name"]
     arguments = json.loads(tool_call["arguments"])
@@ -34,7 +34,19 @@ async def execute_tool_call(tool_call: dict, user_id: str) -> str:
         )
 
         if not results:
-            return "No relevant documents found."
+            return {"text": "No relevant documents found.", "sources": []}
+
+        # Collect unique source documents
+        sources = []
+        seen = set()
+        for r in results:
+            doc_id = r.get("document_id", "")
+            if doc_id and doc_id not in seen:
+                seen.add(doc_id)
+                sources.append({
+                    "filename": r.get("metadata", {}).get("filename", "unknown"),
+                    "document_id": doc_id,
+                })
 
         # Format results for LLM context
         formatted = []
@@ -44,7 +56,7 @@ async def execute_tool_call(tool_call: dict, user_id: str) -> str:
                 f"(similarity: {r['similarity']:.2f})\n{r['content']}"
             )
 
-        return "\n\n---\n\n".join(formatted)
+        return {"text": "\n\n---\n\n".join(formatted), "sources": sources}
 
     logger.warning(f"Unknown tool: {name}")
-    return f"Error: Unknown tool '{name}'"
+    return {"text": f"Error: Unknown tool '{name}'", "sources": []}

@@ -95,6 +95,7 @@ async def send_message(
         """Generate SSE events with tool-calling loop."""
         full_response = ""
         current_messages = list(messages)
+        collected_sources: list[dict] = []
         rounds = 0
 
         try:
@@ -127,19 +128,28 @@ async def send_message(
                             ],
                         })
 
-                        # Execute each tool and add results
+                        # Execute each tool and collect sources
                         for tc in tool_calls:
                             result = await execute_tool_call(tc, current_user.id)
                             current_messages.append({
                                 "role": "tool",
                                 "tool_call_id": tc["id"],
-                                "content": result,
+                                "content": result["text"],
                             })
+                            collected_sources.extend(result["sources"])
 
                         # Continue the loop to call LLM again
                         break
 
                     elif event["type"] == "response_completed":
+                        # Deduplicate sources by document_id
+                        unique_sources = list({s["document_id"]: s for s in collected_sources}.values()) if collected_sources else None
+
+                        # Send sources event before done
+                        if unique_sources:
+                            data = json.dumps({"sources": unique_sources})
+                            yield f"event: sources\ndata: {data}\n\n"
+
                         # Save assistant message to database
                         if full_response:
                             supabase.table("messages").insert({
@@ -147,6 +157,7 @@ async def send_message(
                                 "user_id": current_user.id,
                                 "role": "assistant",
                                 "content": full_response,
+                                "sources": unique_sources,
                                 "created_at": datetime.utcnow().isoformat(),
                             }).execute()
 
@@ -164,12 +175,17 @@ async def send_message(
                         return
 
             # If we exhausted rounds without a final response, send done
+            unique_sources = list({s["document_id"]: s for s in collected_sources}.values()) if collected_sources else None
+            if unique_sources:
+                data = json.dumps({"sources": unique_sources})
+                yield f"event: sources\ndata: {data}\n\n"
             if full_response:
                 supabase.table("messages").insert({
                     "thread_id": thread_id,
                     "user_id": current_user.id,
                     "role": "assistant",
                     "content": full_response,
+                    "sources": unique_sources,
                     "created_at": datetime.utcnow().isoformat(),
                 }).execute()
             yield f"event: done\ndata: {{}}\n\n"
