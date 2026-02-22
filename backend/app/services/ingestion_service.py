@@ -4,6 +4,7 @@ from app.db.supabase import get_supabase_client
 from app.services.chunking_service import chunk_text
 from app.services.embedding_service import get_embeddings
 from app.services.metadata_service import extract_metadata
+from app.services.text_extraction_service import partition_document, chunk_elements, extract_text
 
 logger = logging.getLogger(__name__)
 
@@ -35,24 +36,31 @@ async def process_document(document_id: str, user_id: str) -> None:
         storage_path = doc["storage_path"]
         file_bytes = supabase.storage.from_("documents").download(storage_path)
 
-        # Extract text based on file type
-        text = extract_text(file_bytes, doc["file_type"])
+        # Partition and chunk based on file type
+        elements = partition_document(file_bytes, doc["file_type"])
 
-        if not text.strip():
-            raise ValueError("No text content extracted from document")
+        if elements is not None:
+            # Rich formats (PDF, DOCX, HTML): element-aware chunking
+            if not elements:
+                raise ValueError("No text content extracted from document")
+            text_for_metadata = "\n\n".join(str(e) for e in elements)
+            chunks = chunk_elements(elements)
+        else:
+            # Plain text (.txt, .md): existing pipeline
+            text_for_metadata = extract_text(file_bytes, doc["file_type"])
+            if not text_for_metadata.strip():
+                raise ValueError("No text content extracted from document")
+            chunks = chunk_text(text_for_metadata)
+
+        if not chunks:
+            raise ValueError("No chunks generated from document")
 
         # Extract metadata (graceful degradation — None on failure)
-        doc_metadata = await extract_metadata(text, doc["filename"], user_id)
+        doc_metadata = await extract_metadata(text_for_metadata, doc["filename"], user_id)
         if doc_metadata:
             supabase.table("documents").update({
                 "metadata": doc_metadata.model_dump(),
             }).eq("id", document_id).execute()
-
-        # Chunk the text
-        chunks = chunk_text(text)
-
-        if not chunks:
-            raise ValueError("No chunks generated from document")
 
         # Batch embed and store chunks
         total_chunks = 0
@@ -98,16 +106,3 @@ async def process_document(document_id: str, user_id: str) -> None:
             "status": "failed",
             "error_message": str(e),
         }).eq("id", document_id).execute()
-
-
-def extract_text(file_bytes: bytes, file_type: str) -> str:
-    """Extract text from file bytes based on file type."""
-    # Module 2: only .txt and .md supported
-    if file_type in ("text/plain", "text/markdown"):
-        return file_bytes.decode("utf-8")
-
-    # Try to decode as text for common extensions
-    try:
-        return file_bytes.decode("utf-8")
-    except UnicodeDecodeError:
-        raise ValueError(f"Unsupported file type: {file_type}. Only .txt and .md files are supported.")

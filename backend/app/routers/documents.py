@@ -9,12 +9,15 @@ from app.services.record_manager import hash_content, find_existing_document
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
-ALLOWED_TYPES = {
-    "text/plain": ".txt",
-    "text/markdown": ".md",
-    "application/octet-stream": None,  # fallback, check extension
+ALLOWED_EXTENSIONS = {".txt", ".md", ".pdf", ".docx", ".html", ".htm"}
+CONTENT_TYPE_MAP = {
+    ".txt": "text/plain",
+    ".md": "text/markdown",
+    ".pdf": "application/pdf",
+    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ".html": "text/html",
+    ".htm": "text/html",
 }
-ALLOWED_EXTENSIONS = {".txt", ".md"}
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 
 
@@ -32,7 +35,7 @@ async def upload_document(
     if ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Unsupported file type. Allowed: {', '.join(ALLOWED_EXTENSIONS)}"
+            detail=f"Unsupported file type. Allowed: {', '.join(sorted(ALLOWED_EXTENSIONS))}"
         )
 
     # Read file content
@@ -50,12 +53,8 @@ async def upload_document(
             detail="File is empty."
         )
 
-    # Determine content type
-    content_type = file.content_type or "text/plain"
-    if ext == ".md":
-        content_type = "text/markdown"
-    elif ext == ".txt":
-        content_type = "text/plain"
+    # Determine content type from extension (browsers often send wrong MIME types)
+    content_type = CONTENT_TYPE_MAP.get(ext, file.content_type or "application/octet-stream")
 
     supabase = get_supabase_client()
     content_hash = hash_content(content)
