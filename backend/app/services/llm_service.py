@@ -11,19 +11,32 @@ from app.routers.settings import decrypt_value
 SYSTEM_PROMPT = """You are a helpful assistant for the RAG Masterclass application.
 You can answer questions and help users with their queries.
 When relevant, search through the uploaded documents to provide accurate information.
-Always cite your sources when using information from documents."""
+Always cite your sources when using information from documents.
+
+When the user asks about a specific type of document (e.g., "my meeting notes", "the tutorial", "that report"),
+use the document_type filter to narrow the search. When they mention a specific topic, use the topic filter.
+Available document types: meeting_notes, technical_doc, tutorial, report, email, notes, article, other."""
 
 RAG_TOOLS = [{
     "type": "function",
     "function": {
         "name": "search_documents",
-        "description": "Search the user's uploaded documents for relevant information. Use this when the user asks questions that might be answered by their documents.",
+        "description": "Search the user's uploaded documents for relevant information. Use this when the user asks questions that might be answered by their documents. You can optionally filter by document_type or topic to narrow results.",
         "parameters": {
             "type": "object",
             "properties": {
                 "query": {
                     "type": "string",
                     "description": "The search query to find relevant document content"
+                },
+                "document_type": {
+                    "type": "string",
+                    "description": "Filter by document type. One of: meeting_notes, technical_doc, tutorial, report, email, notes, article, other",
+                    "enum": ["meeting_notes", "technical_doc", "tutorial", "report", "email", "notes", "article", "other"]
+                },
+                "topic": {
+                    "type": "string",
+                    "description": "Filter by topic (e.g., 'Kubernetes deployment', 'Q4 financials')"
                 }
             },
             "required": ["query"]

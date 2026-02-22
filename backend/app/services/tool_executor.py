@@ -22,7 +22,16 @@ async def execute_tool_call(tool_call: dict, user_id: str) -> str:
 
     if name == "search_documents":
         query = arguments.get("query", "")
-        results = await search_documents(query, user_id)
+        metadata_filter = {}
+        if arguments.get("document_type"):
+            metadata_filter["document_type"] = arguments["document_type"]
+        if arguments.get("topic"):
+            metadata_filter["topic"] = arguments["topic"]
+
+        results = await search_documents(
+            query, user_id,
+            metadata_filter=metadata_filter if metadata_filter else None,
+        )
 
         if not results:
             return "No relevant documents found."
