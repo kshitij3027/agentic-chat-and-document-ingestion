@@ -90,13 +90,22 @@ async def search_documents(
     """
     candidate_count = 3 * top_k
 
-    # Run both searches
-    vector_results = await vector_search(
-        query, user_id, candidate_count, threshold, metadata_filter
-    )
-    kw_results = await keyword_search(
-        query, user_id, candidate_count, metadata_filter
-    )
+    # Run both searches -- each wrapped so one failing doesn't kill the other
+    try:
+        vector_results = await vector_search(
+            query, user_id, candidate_count, threshold, metadata_filter
+        )
+    except Exception as e:
+        logger.warning(f"Vector search failed, continuing with keyword only: {e}")
+        vector_results = []
+
+    try:
+        kw_results = await keyword_search(
+            query, user_id, candidate_count, metadata_filter
+        )
+    except Exception as e:
+        logger.warning(f"Keyword search failed, continuing with vector only: {e}")
+        kw_results = []
 
     logger.info(
         f"Hybrid search: {len(vector_results)} vector results, "
@@ -113,7 +122,14 @@ async def search_documents(
     else:
         return []
 
+    logger.info(
+        f"RRF fusion: {len(fused)} unique candidates from "
+        f"{len(vector_results)} vector + {len(kw_results)} keyword"
+    )
+
     # Rerank (no-op if reranker not configured)
     reranked = await rerank_results(query, fused, top_n=top_k)
+
+    logger.info(f"Final results: {len(reranked[:top_k])} chunks returned")
 
     return reranked[:top_k]

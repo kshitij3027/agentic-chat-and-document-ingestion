@@ -1,5 +1,6 @@
 """Optional reranking via Cohere API."""
 import logging
+import time
 
 import httpx
 from postgrest.exceptions import APIError
@@ -59,11 +60,15 @@ async def rerank_results(
 
     settings = get_reranker_settings()
     if not settings:
+        logger.info("Reranker not configured, skipping")
         return documents[:top_n]
 
     doc_texts = [d.get("content", "") for d in documents]
 
+    logger.info(f"Reranking {len(documents)} documents with model={settings['model']}")
+
     try:
+        t0 = time.perf_counter()
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.post(
                 "https://api.cohere.com/v2/rerank",
@@ -80,12 +85,21 @@ async def rerank_results(
             )
             response.raise_for_status()
             data = response.json()
+        elapsed = time.perf_counter() - t0
 
         reranked = []
         for result in data.get("results", []):
             idx = result["index"]
             doc = {**documents[idx], "relevance_score": result["relevance_score"]}
             reranked.append(doc)
+
+        if reranked:
+            logger.info(
+                f"Rerank complete in {elapsed:.1f}s — "
+                f"top score: {reranked[0]['relevance_score']:.3f}, "
+                f"bottom score: {reranked[-1]['relevance_score']:.3f}"
+            )
+
         return reranked
 
     except Exception as e:

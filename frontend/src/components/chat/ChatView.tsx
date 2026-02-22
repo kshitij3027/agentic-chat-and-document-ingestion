@@ -26,12 +26,12 @@ export function ChatView({ threadId, onThreadTitleUpdate, initialMessage }: Chat
   const abortControllerRef = useRef<AbortController | null>(null)
   const initialMessageSentRef = useRef(false)
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  const scrollToBottom = (instant = false) => {
+    messagesEndRef.current?.scrollIntoView({ behavior: instant ? 'auto' : 'smooth' })
   }
 
   useEffect(() => {
-    scrollToBottom()
+    scrollToBottom(!!streamingContent)
   }, [messages, streamingContent])
 
   useEffect(() => {
@@ -176,19 +176,15 @@ export function ChatView({ threadId, onThreadTitleUpdate, initialMessage }: Chat
     }
   }, [sending, streamingContent, threadId, streamingSources])
 
-  if (loading) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    )
-  }
-
   return (
     <div className="flex h-full flex-col">
       {/* Messages area */}
-      <div className="flex-1 overflow-y-auto">
-        {messages.length === 0 && !streamingContent && !waiting && !error ? (
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        {loading ? (
+          <div className="flex h-full items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : messages.length === 0 && !streamingContent && !waiting && !error ? (
           <div className="flex h-full items-center justify-center">
             <div className="text-center text-muted-foreground">
               <p className="text-2xl font-medium mb-2">What can I help with?</p>
@@ -276,7 +272,7 @@ export function ChatView({ threadId, onThreadTitleUpdate, initialMessage }: Chat
       </div>
 
       {/* Input area */}
-      <div className="border-t bg-background">
+      <div className="shrink-0 border-t bg-background">
         <div className="mx-auto max-w-3xl px-4 py-4">
           <form onSubmit={handleSubmit} className="flex gap-2">
             <Input

@@ -87,7 +87,7 @@ export function ChatPage() {
       </div>
 
       {/* Main content */}
-      <div className="flex-1">
+      <div className="flex-1 overflow-hidden">
         {selectedThreadId ? (
           <ChatView
             key={selectedThreadId}

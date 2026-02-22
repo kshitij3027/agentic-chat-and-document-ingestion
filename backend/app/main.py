@@ -1,9 +1,12 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+import logging
 import traceback
 
 from app.config import get_settings
+
+logging.basicConfig(level=logging.INFO)
 from app.routers import auth, threads, chat, documents
 from app.routers import settings as settings_router
 

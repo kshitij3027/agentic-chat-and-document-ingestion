@@ -150,21 +150,26 @@ async def send_message(
                             data = json.dumps({"sources": unique_sources})
                             yield f"event: sources\ndata: {data}\n\n"
 
-                        # Save assistant message to database
-                        if full_response:
-                            supabase.table("messages").insert({
-                                "thread_id": thread_id,
-                                "user_id": current_user.id,
-                                "role": "assistant",
-                                "content": full_response,
-                                "sources": unique_sources,
-                                "created_at": datetime.utcnow().isoformat(),
-                            }).execute()
+                        # Send fallback if LLM produced no text
+                        if not full_response:
+                            full_response = "I couldn't find relevant information in your documents. Try uploading documents or rephrasing your question."
+                            data = json.dumps({"content": full_response})
+                            yield f"event: text_delta\ndata: {data}\n\n"
 
-                            # Update thread's updated_at
-                            supabase.table("threads").update({
-                                "updated_at": datetime.utcnow().isoformat()
-                            }).eq("id", thread_id).execute()
+                        # Save assistant message to database
+                        supabase.table("messages").insert({
+                            "thread_id": thread_id,
+                            "user_id": current_user.id,
+                            "role": "assistant",
+                            "content": full_response,
+                            "sources": unique_sources,
+                            "created_at": datetime.utcnow().isoformat(),
+                        }).execute()
+
+                        # Update thread's updated_at
+                        supabase.table("threads").update({
+                            "updated_at": datetime.utcnow().isoformat()
+                        }).eq("id", thread_id).execute()
 
                         yield f"event: done\ndata: {{}}\n\n"
                         return  # Done, exit the generator
@@ -174,25 +179,33 @@ async def send_message(
                         yield f"event: error\ndata: {data}\n\n"
                         return
 
-            # If we exhausted rounds without a final response, send done
+            # If we exhausted rounds without a final response, send a fallback
             unique_sources = list({s["document_id"]: s for s in collected_sources}.values()) if collected_sources else None
             if unique_sources:
                 data = json.dumps({"sources": unique_sources})
                 yield f"event: sources\ndata: {data}\n\n"
-            if full_response:
-                supabase.table("messages").insert({
-                    "thread_id": thread_id,
-                    "user_id": current_user.id,
-                    "role": "assistant",
-                    "content": full_response,
-                    "sources": unique_sources,
-                    "created_at": datetime.utcnow().isoformat(),
-                }).execute()
+            if not full_response:
+                full_response = "I wasn't able to generate a response. Please try rephrasing your question."
+                data = json.dumps({"content": full_response})
+                yield f"event: text_delta\ndata: {data}\n\n"
+            supabase.table("messages").insert({
+                "thread_id": thread_id,
+                "user_id": current_user.id,
+                "role": "assistant",
+                "content": full_response,
+                "sources": unique_sources,
+                "created_at": datetime.utcnow().isoformat(),
+            }).execute()
+            supabase.table("threads").update({
+                "updated_at": datetime.utcnow().isoformat()
+            }).eq("id", thread_id).execute()
             yield f"event: done\ndata: {{}}\n\n"
 
         except Exception as e:
             data = json.dumps({"error": str(e)})
             yield f"event: error\ndata: {data}\n\n"
+            # Always close the stream so the frontend exits cleanly
+            yield f"event: done\ndata: {{}}\n\n"
 
     return StreamingResponse(
         generate(),
