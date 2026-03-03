@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     langsmith_project: str = "rag-masterclass"
     langsmith_endpoint: str = "https://api.smith.langchain.com"
 
+    # SQL Agent
+    sql_reader_database_url: str = ""
+
     # Encryption
     settings_encryption_key: str = ""
 
