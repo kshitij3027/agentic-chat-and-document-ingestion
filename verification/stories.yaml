@@ -1,0 +1,389 @@
+stories:
+  # ── Navigation ────────────────────────────────────────────────────────
+  - name: "Switch between Chat and Documents tabs"
+    url: "http://localhost:5173"
+    workflow: |
+      Navigate to http://localhost:5173/auth
+      Enter "{{TEST_EMAIL}}" in the Email field
+      Enter "{{TEST_PASSWORD}}" in the Password field
+      Click "Sign In" and wait for the chat page to load
+      Verify the "Chat" tab in the sidebar nav is active (has bg-muted styling)
+      Click the "Documents" tab in the sidebar nav
+      Verify the page navigates to /documents
+      Verify the "Documents" heading is visible in the main content area
+      Click the "Chat" tab in the sidebar nav
+      Verify the page navigates back to / with the "What can I help with?" welcome text
+
+  - name: "Admin can access Settings via user menu"
+    url: "http://localhost:5173"
+    workflow: |
+      Navigate to http://localhost:5173/auth
+      Enter "{{TEST_EMAIL}}" in the Email field
+      Enter "{{TEST_PASSWORD}}" in the Password field
+      Click "Sign In" and wait for the chat page to load
+      Click the user avatar/menu button at the bottom of the sidebar
+      Verify the popover menu shows a "Settings" option (admin user only)
+      Click "Settings"
+      Verify the page navigates to /settings
+      Verify the "Settings" heading is visible
+      Verify "LLM Configuration" and "Embedding Configuration" sections are shown
+
+  # ── Threads ───────────────────────────────────────────────────────────
+  - name: "Create a new thread via New Chat button"
+    url: "http://localhost:5173"
+    workflow: |
+      Navigate to http://localhost:5173/auth
+      Enter "{{TEST_EMAIL}}" in the Email field
+      Enter "{{TEST_PASSWORD}}" in the Password field
+      Click "Sign In" and wait for the chat page to load
+      Click the "New Chat" button in the sidebar
+      Verify a new thread appears in the thread list in the sidebar
+      Verify the main content area shows the chat view with "What can I help with?" prompt
+
+  - name: "Create a thread by sending from welcome input"
+    url: "http://localhost:5173"
+    workflow: |
+      Navigate to http://localhost:5173/auth
+      Enter "{{TEST_EMAIL}}" in the Email field
+      Enter "{{TEST_PASSWORD}}" in the Password field
+      Click "Sign In" and wait for the chat page to load
+      Verify the welcome screen shows "What can I help with?" and an input with placeholder "Ask anything"
+      Type "Hello, this is a test message" in the welcome input
+      Click the send button (arrow icon)
+      Verify a new thread appears in the sidebar thread list
+      Verify the chat view opens and shows the user message "Hello, this is a test message"
+
+  - name: "Delete a thread"
+    url: "http://localhost:5173"
+    workflow: |
+      Navigate to http://localhost:5173/auth
+      Enter "{{TEST_EMAIL}}" in the Email field
+      Enter "{{TEST_PASSWORD}}" in the Password field
+      Click "Sign In" and wait for the chat page to load
+      Click "New Chat" to create a thread
+      Verify the thread appears in the sidebar
+      Hover over the thread in the sidebar to reveal the delete (trash) icon
+      Click the delete icon
+      Verify the thread is removed from the sidebar list
+
+  # ── Chat ──────────────────────────────────────────────────────────────
+  - name: "User can send messages and have a multi-turn conversation"
+    url: "http://localhost:5173/auth"
+    workflow: |
+      Navigate to http://localhost:5173/auth
+      Type "{{TEST_EMAIL}}" in the email input field
+      Type "zahcyf-pizPev-4fecva" in the password input field
+      Click the "Sign In" button
+      Wait for navigation to complete
+      Verify the URL contains "/chat"
+      Click the "New Chat" button
+      Wait for the new thread to appear in the sidebar
+      Type "What is the largest ocean on Earth?" in the message input textarea
+      Click the send button or press Enter
+      Wait for a response to appear in the message area
+      Verify the message area shows the user's message "What is the largest ocean on Earth?"
+      Verify the message area shows an assistant response that mentions "Pacific"
+      Verify the message input textarea is enabled and ready for typing
+      Type "What is the chemical symbol for gold?" in the message input textarea
+      Click the send button or press Enter
+      Wait for a second assistant response to appear
+      Verify the message area shows the user's message "What is the chemical symbol for gold?"
+      Verify the second assistant response mentions "Au"
+      Verify the message input textarea is enabled and ready for typing
+      Type "How many planets are in our solar system?" in the message input textarea
+      Click the send button or press Enter
+      Wait for a third assistant response to appear
+      Verify the message area shows the user's message "How many planets are in our solar system?"
+      Verify the third assistant response mentions "eight" or "8"
+      Verify the message input textarea is enabled and ready for typing after the third response
+
+  - name: "Stop generation mid-stream"
+    url: "http://localhost:5173"
+    workflow: |
+      Navigate to http://localhost:5173/auth
+      Enter "{{TEST_EMAIL}}" in the Email field
+      Enter "{{TEST_PASSWORD}}" in the Password field
+      Click "Sign In" and wait for the chat page to load
+      Click "New Chat" to create a thread
+      Type "Write a long essay about the history of computing" in the chat input
+      Click the send button
+      Wait for the streaming to begin (assistant text starts appearing)
+      Verify a red stop button (square icon) appears in place of the send button
+      Click the stop button
+      Verify the streaming stops and the send button reappears
+      Verify the partial assistant response remains visible in the chat
+
+  # ── Documents ─────────────────────────────────────────────────────────
+  - name: "Documents page renders with upload zone"
+    url: "http://localhost:5173"
+    workflow: |
+      Navigate to http://localhost:5173/auth
+      Enter "{{TEST_EMAIL}}" in the Email field
+      Enter "{{TEST_PASSWORD}}" in the Password field
+      Click "Sign In" and wait for the chat page to load
+      Click the "Documents" tab in the sidebar nav
+      Verify the "Documents" heading is displayed
+      Verify the description text "Upload documents to use as context in your chats." is shown
+      Verify a drag-and-drop upload zone is visible with text "Drop files here or click to upload"
+      Verify the supported formats text reads "Supported: .txt, .md, .pdf, .docx, .html (max 10 MB)"
+
+  - name: "Upload a text file and observe status transitions"
+    url: "http://localhost:5173"
+    workflow: |
+      Navigate to http://localhost:5173/auth
+      Enter "{{TEST_EMAIL}}" in the Email field
+      Enter "{{TEST_PASSWORD}}" in the Password field
+      Click "Sign In" and wait for the chat page to load
+      Click the "Documents" tab
+      Create a small test file "test-doc.txt" with content "This is a test document for RAG."
+      Upload the file via the upload zone (click and select file)
+      Verify the document appears in the document list below the upload zone
+      Verify the document shows the filename "test-doc.txt"
+      Verify a status badge is shown (initially "pending" or "processing")
+      Wait for status to transition to "completed" (via Supabase Realtime)
+      Verify the completed document shows a chunk count
+
+  - name: "Delete a document"
+    url: "http://localhost:5173"
+    workflow: |
+      Navigate to http://localhost:5173/auth
+      Enter "{{TEST_EMAIL}}" in the Email field
+      Enter "{{TEST_PASSWORD}}" in the Password field
+      Click "Sign In" and wait for the chat page to load
+      Click the "Documents" tab
+      Verify at least one document is listed (from the previous upload story)
+      Click the "Delete" button on a document
+      Verify a confirmation dialog appears
+      Accept the confirmation
+      Verify the document is removed from the list
+
+  # ── Settings (Admin) ─────────────────────────────────────────────────
+  - name: "Admin can view and edit settings"
+    url: "http://localhost:5173"
+    workflow: |
+      Navigate to http://localhost:5173/auth
+      Enter "{{TEST_EMAIL}}" in the Email field
+      Enter "{{TEST_PASSWORD}}" in the Password field
+      Click "Sign In" and wait for the chat page to load
+      Click the user avatar/menu button
+      Click "Settings"
+      Verify the Settings page loads with "LLM Configuration" section
+      Verify there are fields for Model Name, Base URL, and API Key under LLM Configuration
+      Verify there is an "Embedding Configuration" section
+      Verify there are fields for Model Name, Base URL, API Key, and Dimensions under Embedding Configuration
+      Verify there are "Cancel" and "Save" buttons at the bottom
+
+  - name: "Non-admin is redirected away from settings"
+    url: "http://localhost:5173"
+    workflow: |
+      Navigate to http://localhost:5173/auth
+      Enter "newuser@gmail.com" in the Email field
+      Enter "password123" in the Password field
+      Click "Sign In" and wait for the chat page to load
+      Navigate directly to http://localhost:5173/settings
+      Verify the page redirects to / (the chat page) since the user is not an admin
+
+  - name: "Save LLM settings"
+    url: "http://localhost:5173"
+    workflow: |
+      Navigate to http://localhost:5173/auth
+      Enter "{{TEST_EMAIL}}" in the Email field
+      Enter "{{TEST_PASSWORD}}" in the Password field
+      Click "Sign In" and wait for the chat page to load
+      Click the user avatar/menu button
+      Click "Settings"
+      Enter "gpt-4o" in the LLM Model Name field
+      Enter "https://api.openai.com/v1" in the LLM Base URL field
+      Click the "Save" button
+      Verify a green "Settings saved successfully." confirmation message appears
+
+  # ── Record Manager (Module 3) ─────────────────────────────────────
+  - name: "Re-upload identical file shows skip message"
+    url: "http://localhost:5173"
+    workflow: |
+      Navigate to http://localhost:5173/auth
+      Enter "{{TEST_EMAIL}}" in the Email field
+      Enter "{{TEST_PASSWORD}}" in the Password field
+      Click "Sign In" and wait for the chat page to load
+      Click the "Documents" tab in the sidebar nav
+      Create a small test file "reupload-test.txt" with content "Record manager test content."
+      Upload the file via the upload zone (click and select file)
+      Verify the document appears in the document list with filename "reupload-test.txt"
+      Wait for status to transition to "completed"
+      Upload the same file "reupload-test.txt" with identical content "Record manager test content." again
+      Verify a blue info message appears containing "is unchanged — skipped re-processing"
+      Verify the document list still shows only one entry for "reupload-test.txt"
+
+  - name: "Re-upload modified file replaces document"
+    url: "http://localhost:5173"
+    workflow: |
+      Navigate to http://localhost:5173/auth
+      Enter "{{TEST_EMAIL}}" in the Email field
+      Enter "{{TEST_PASSWORD}}" in the Password field
+      Click "Sign In" and wait for the chat page to load
+      Click the "Documents" tab in the sidebar nav
+      Verify "reupload-test.txt" is listed from the previous story
+      Create a new file "reupload-test.txt" with different content "Updated record manager test content with changes."
+      Upload the modified file via the upload zone
+      Verify no skip info message appears (content changed, so it re-processes)
+      Verify the document list still shows only one entry for "reupload-test.txt"
+      Wait for the document status to transition to "completed" (via Supabase Realtime)
+
+  # ── Metadata Extraction (Module 4) ──────────────────────────────────
+  - name: "Uploaded document shows extracted metadata"
+    url: "http://localhost:5173"
+    workflow: |
+      Navigate to http://localhost:5173/auth
+      Enter "{{TEST_EMAIL}}" in the Email field
+      Enter "{{TEST_PASSWORD}}" in the Password field
+      Click "Sign In" and wait for the chat page to load
+      Click the "Documents" tab in the sidebar nav
+      Create a test file "meeting-notes-test.txt" with content "Meeting Notes - Q1 Planning\n\nAttendees: Alice Johnson, Bob Smith, Charlie Lee\nDate: January 15, 2026\nProject: Kubernetes Migration\n\nAgenda:\n1. Review migration timeline\n2. Discuss resource allocation\n3. Address security concerns\n\nKey decisions:\n- Target completion date set to March 30\n- DevOps team will lead the migration\n- Weekly sync meetings every Tuesday"
+      Upload the file via the upload zone (click and select file)
+      Verify the document appears in the document list with filename "meeting-notes-test.txt"
+      Wait for status to transition to "completed" (via Supabase Realtime)
+      Verify a purple badge appears showing the document type (e.g. "meeting notes")
+      Verify a blue badge appears showing the topic
+      Verify at least one gray entity badge is visible
+      Verify a summary text line appears below the badges
+
+  - name: "Metadata-filtered retrieval narrows search results"
+    url: "http://localhost:5173"
+    workflow: |
+      Navigate to http://localhost:5173/auth
+      Enter "{{TEST_EMAIL}}" in the Email field
+      Enter "{{TEST_PASSWORD}}" in the Password field
+      Click "Sign In" and wait for the chat page to load
+      Verify the chat page loads
+      Click "New Chat" to create a thread
+      Type "Search only my meeting notes for information about the migration timeline" in the chat input
+      Click the send button
+      Wait for the assistant response to appear
+      Verify the assistant response references content from the meeting notes document (mentions Kubernetes, migration, or March)
+
+  # ── Multi-Format Support (Module 5) ──────────────────────────────────
+  - name: "Upload a PDF file and observe successful processing"
+    url: "http://localhost:5173"
+    workflow: |
+      Navigate to http://localhost:5173/auth
+      Enter "{{TEST_EMAIL}}" in the Email field
+      Enter "{{TEST_PASSWORD}}" in the Password field
+      Click "Sign In" and wait for the chat page to load
+      Click the "Documents" tab in the sidebar nav
+      Upload the file "sample.pdf" from test_data via the upload zone
+      Verify the document appears in the document list with filename "sample.pdf"
+      Verify a status badge is shown (initially "pending" or "processing")
+      Wait for status to transition to "completed" (via Supabase Realtime)
+      Verify the completed document shows a chunk count greater than 0
+
+  - name: "Upload a DOCX file and observe successful processing"
+    url: "http://localhost:5173"
+    workflow: |
+      Navigate to http://localhost:5173/auth
+      Enter "{{TEST_EMAIL}}" in the Email field
+      Enter "{{TEST_PASSWORD}}" in the Password field
+      Click "Sign In" and wait for the chat page to load
+      Click the "Documents" tab in the sidebar nav
+      Upload the file "sample.docx" from test_data via the upload zone
+      Verify the document appears in the document list with filename "sample.docx"
+      Verify a status badge is shown (initially "pending" or "processing")
+      Wait for status to transition to "completed" (via Supabase Realtime)
+      Verify the completed document shows a chunk count greater than 0
+
+  - name: "Upload an HTML file and observe successful processing"
+    url: "http://localhost:5173"
+    workflow: |
+      Navigate to http://localhost:5173/auth
+      Enter "{{TEST_EMAIL}}" in the Email field
+      Enter "{{TEST_PASSWORD}}" in the Password field
+      Click "Sign In" and wait for the chat page to load
+      Click the "Documents" tab in the sidebar nav
+      Upload the file "sample.html" from test_data via the upload zone
+      Verify the document appears in the document list with filename "sample.html"
+      Verify a status badge is shown (initially "pending" or "processing")
+      Wait for status to transition to "completed" (via Supabase Realtime)
+      Verify the completed document shows a chunk count greater than 0
+
+  # -- Hybrid Search & Reranking (Module 6) ────────────────────────────
+  - name: "Hybrid search returns results for keyword-heavy queries"
+    url: "http://localhost:5173"
+    workflow: |
+      Navigate to http://localhost:5173/auth
+      Enter "{{TEST_EMAIL}}" in the Email field
+      Enter "{{TEST_PASSWORD}}" in the Password field
+      Click "Sign In" and wait for the chat page to load
+      Click the "Documents" tab in the sidebar nav
+      Upload the file "hybrid-search-test.txt" from test_data via the upload zone
+      Verify the document appears in the document list with filename "hybrid-search-test.txt"
+      Wait for status to transition to "completed" (via Supabase Realtime)
+      Click the "Chat" tab in the sidebar nav
+      Click "New Chat" to create a thread
+      Type "What is the RACI matrix for the Kubernetes project?" in the chat input
+      Click the send button
+      Wait for the assistant response to appear
+      Verify the assistant response references RACI, Kubernetes, or migration content from the uploaded document
+
+  - name: "Exact keyword match retrieves relevant document"
+    url: "http://localhost:5173"
+    workflow: |
+      Navigate to http://localhost:5173/auth
+      Enter "{{TEST_EMAIL}}" in the Email field
+      Enter "{{TEST_PASSWORD}}" in the Password field
+      Click "Sign In" and wait for the chat page to load
+      Click "New Chat" to create a thread
+      Type "Who is the SRE lead?" in the chat input
+      Click the send button
+      Wait for the assistant response to appear
+      Verify the assistant response mentions "Priya Ramanathan" or "SRE" from the uploaded document
+
+  - name: "Admin can configure reranker settings"
+    url: "http://localhost:5173"
+    workflow: |
+      Navigate to http://localhost:5173/auth
+      Enter "{{TEST_EMAIL}}" in the Email field
+      Enter "{{TEST_PASSWORD}}" in the Password field
+      Click "Sign In" and wait for the chat page to load
+      Click the user avatar/menu button at the bottom of the sidebar
+      Click "Settings"
+      Verify the Settings page loads with "Reranker Configuration" section
+      Verify there are fields for Model Name and API Key under Reranker Configuration
+      Enter "rerank-v3.5" in the Reranker Model Name field
+      Click the "Save" button
+      Verify a green "Settings saved successfully." confirmation message appears
+
+  # ── Additional Tools (Module 7) ────────────────────────────────────
+  - name: "SQL and web search tools display in chat"
+    url: "http://localhost:5173"
+    workflow: |
+      Navigate to http://localhost:5173/auth
+      Enter "{{TEST_EMAIL}}" in the Email field
+      Enter "{{TEST_PASSWORD}}" in the Password field
+      Click "Sign In" and wait for the chat page to load
+      Click "New Chat" to create a thread
+      Type "What are total sales by region?" in the chat input
+      Click the send button
+      Wait for the assistant response to appear
+      Verify a collapsible steps panel appears above the assistant response
+      Verify the steps panel shows "Querying database" with a database icon
+      Verify the tool call shows a completed status (checkmark icon)
+      Verify the assistant response mentions sales data, regional information, or dollar amounts
+      Click the steps panel to expand it
+      Verify the expanded panel shows the SQL query that was executed
+
+  - name: "Admin can configure web search settings"
+    url: "http://localhost:5173"
+    workflow: |
+      Navigate to http://localhost:5173/auth
+      Enter "{{TEST_EMAIL}}" in the Email field
+      Enter "{{TEST_PASSWORD}}" in the Password field
+      Click "Sign In" and wait for the chat page to load
+      Click the user avatar/menu button at the bottom of the sidebar
+      Click "Settings"
+      Verify the Settings page loads
+      Scroll down to find the "Web Search Configuration" section
+      Verify there is an "Enable web search" checkbox
+      Verify there are fields for Provider and API Key
+      Verify the Provider field is pre-filled with "tavily"
+      Check the "Enable web search" checkbox
+      Click the "Save" button
+      Verify a green "Settings saved successfully." confirmation message appears
