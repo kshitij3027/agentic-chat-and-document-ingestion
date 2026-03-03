@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
 import { Send, Square, Loader2, FileText } from 'lucide-react'
+import { StepsPanel } from './StepsPanel'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { getMessages, sendMessage, updateThread } from '@/lib/api'
-import type { Message, MessageSource } from '@/types'
+import type { Message, MessageSource, ToolCallInfo } from '@/types'
 
 interface ChatViewProps {
   threadId: string
@@ -21,6 +22,7 @@ export function ChatView({ threadId, onThreadTitleUpdate, initialMessage }: Chat
   const [waiting, setWaiting] = useState(false)
   const [streamingContent, setStreamingContent] = useState('')
   const [streamingSources, setStreamingSources] = useState<MessageSource[]>([])
+  const [streamingToolCalls, setStreamingToolCalls] = useState<ToolCallInfo[]>([])
   const [error, setError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
@@ -68,6 +70,7 @@ export function ChatView({ threadId, onThreadTitleUpdate, initialMessage }: Chat
     setWaiting(true)
     setStreamingContent('')
     setStreamingSources([])
+    setStreamingToolCalls([])
     setError(null)
 
     abortControllerRef.current = new AbortController()
@@ -105,6 +108,22 @@ export function ChatView({ threadId, onThreadTitleUpdate, initialMessage }: Chat
         },
         onSources: (sources) => {
           setStreamingSources(sources)
+        },
+        onToolCallStart: (toolName, args) => {
+          setWaiting(false)
+          setStreamingToolCalls(prev => [
+            ...prev,
+            { tool_name: toolName, arguments: args, status: 'running' },
+          ])
+        },
+        onToolCallComplete: (toolName, resultSummary) => {
+          setStreamingToolCalls(prev =>
+            prev.map(tc =>
+              tc.tool_name === toolName && tc.status === 'running'
+                ? { ...tc, status: 'completed' as const, result_summary: resultSummary }
+                : tc
+            )
+          )
         },
         onDone: () => {
           setSending(false)
@@ -168,13 +187,15 @@ export function ChatView({ threadId, onThreadTitleUpdate, initialMessage }: Chat
           role: 'assistant',
           content: streamingContent,
           sources: streamingSources.length > 0 ? streamingSources : null,
+          tool_calls: streamingToolCalls.length > 0 ? streamingToolCalls : null,
           created_at: new Date().toISOString(),
         } as Message,
       ])
       setStreamingContent('')
       setStreamingSources([])
+      setStreamingToolCalls([])
     }
-  }, [sending, streamingContent, threadId, streamingSources])
+  }, [sending, streamingContent, threadId, streamingSources, streamingToolCalls])
 
   return (
     <div className="flex h-full flex-col">
@@ -203,6 +224,9 @@ export function ChatView({ threadId, onThreadTitleUpdate, initialMessage }: Chat
                     </div>
                   ) : (
                     <div>
+                      {message.tool_calls && message.tool_calls.length > 0 && (
+                        <StepsPanel toolCalls={message.tool_calls} />
+                      )}
                       <div className="prose prose-neutral dark:prose-invert max-w-none">
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>
                           {message.content}
@@ -226,6 +250,11 @@ export function ChatView({ threadId, onThreadTitleUpdate, initialMessage }: Chat
                 </div>
               ))}
 
+              {/* Streaming tool calls */}
+              {streamingToolCalls.length > 0 && !streamingContent && (
+                <StepsPanel toolCalls={streamingToolCalls} />
+              )}
+
               {/* Loading indicator */}
               {waiting && !streamingContent && (
                 <div className="flex items-center gap-2 text-muted-foreground">
@@ -237,6 +266,9 @@ export function ChatView({ threadId, onThreadTitleUpdate, initialMessage }: Chat
               {/* Streaming message */}
               {streamingContent && (
                 <div>
+                  {streamingToolCalls.length > 0 && (
+                    <StepsPanel toolCalls={streamingToolCalls} />
+                  )}
                   <div className="prose prose-neutral dark:prose-invert max-w-none">
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>
                       {streamingContent}

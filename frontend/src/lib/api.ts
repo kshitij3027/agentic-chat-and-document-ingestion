@@ -81,13 +81,15 @@ export interface SendMessageOptions {
   content: string
   onTextDelta: (text: string) => void
   onSources?: (sources: Array<{filename: string, document_id: string}>) => void
+  onToolCallStart?: (toolName: string, args: string) => void
+  onToolCallComplete?: (toolName: string, resultSummary: string) => void
   onDone: () => void
   onError: (error: string) => void
   signal?: AbortSignal
 }
 
 export async function sendMessage(options: SendMessageOptions): Promise<void> {
-  const { threadId, content, onTextDelta, onSources, onDone, onError, signal } = options
+  const { threadId, content, onTextDelta, onSources, onToolCallStart, onToolCallComplete, onDone, onError, signal } = options
 
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) {
@@ -141,7 +143,11 @@ export async function sendMessage(options: SendMessageOptions): Promise<void> {
           const data = line.slice(6)
           try {
             const parsed = JSON.parse(data)
-            if (currentEventType === 'sources' && parsed.sources && onSources) {
+            if (parsed.type === 'tool_call_start' && onToolCallStart) {
+              onToolCallStart(parsed.tool_name, parsed.arguments)
+            } else if (parsed.type === 'tool_call_complete' && onToolCallComplete) {
+              onToolCallComplete(parsed.tool_name, parsed.result_summary)
+            } else if (currentEventType === 'sources' && parsed.sources && onSources) {
               onSources(parsed.sources)
             } else if (parsed.content) {
               onTextDelta(parsed.content)
@@ -220,6 +226,9 @@ export interface GlobalSettings {
   embedding_dimensions: number | null
   reranker_api_key: string | null
   reranker_model: string | null
+  web_search_provider: string | null
+  web_search_api_key: string | null
+  web_search_enabled: boolean
   has_chunks: boolean
 }
 
@@ -233,6 +242,9 @@ export interface GlobalSettingsUpdate {
   embedding_dimensions?: number | null
   reranker_api_key?: string | null
   reranker_model?: string | null
+  web_search_provider?: string | null
+  web_search_api_key?: string | null
+  web_search_enabled?: boolean
 }
 
 export async function getSettings(): Promise<GlobalSettings> {

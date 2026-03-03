@@ -11,6 +11,13 @@ export interface MessageSource {
   document_id: string
 }
 
+export interface ToolCallInfo {
+  tool_name: string
+  arguments: string
+  status: 'running' | 'completed'
+  result_summary?: string
+}
+
 export interface Message {
   id: string
   thread_id: string
@@ -19,6 +26,7 @@ export interface Message {
   role: 'user' | 'assistant'
   content: string
   sources?: MessageSource[] | null
+  tool_calls?: ToolCallInfo[] | null
   created_at: string
 }
 

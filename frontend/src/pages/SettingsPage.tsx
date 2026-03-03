@@ -30,6 +30,10 @@ export function SettingsPage() {
   const [showLlmKey, setShowLlmKey] = useState(false)
   const [showEmbeddingKey, setShowEmbeddingKey] = useState(false)
   const [showRerankerKey, setShowRerankerKey] = useState(false)
+  const [webSearchEnabled, setWebSearchEnabled] = useState(false)
+  const [webSearchProvider, setWebSearchProvider] = useState('tavily')
+  const [webSearchApiKey, setWebSearchApiKey] = useState('')
+  const [showWebSearchKey, setShowWebSearchKey] = useState(false)
 
   // Redirect non-admins to home (wait for loading to complete first)
   useEffect(() => {
@@ -58,6 +62,9 @@ export function SettingsPage() {
       setEmbeddingDimensions(settings.embedding_dimensions?.toString() || '')
       setRerankerModel(settings.reranker_model || '')
       setRerankerApiKey(settings.reranker_api_key || '')
+      setWebSearchEnabled(settings.web_search_enabled || false)
+      setWebSearchProvider(settings.web_search_provider || 'tavily')
+      setWebSearchApiKey(settings.web_search_api_key || '')
       setHasChunks(settings.has_chunks)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load settings')
@@ -81,6 +88,9 @@ export function SettingsPage() {
         embedding_dimensions: embeddingDimensions ? parseInt(embeddingDimensions, 10) : null,
         reranker_model: rerankerModel || null,
         reranker_api_key: rerankerApiKey || null,
+        web_search_enabled: webSearchEnabled,
+        web_search_provider: webSearchProvider || null,
+        web_search_api_key: webSearchApiKey || null,
       }
       await updateSettings(update)
       setSuccess(true)
@@ -334,6 +344,63 @@ export function SettingsPage() {
                         tabIndex={-1}
                       >
                         {showRerankerKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Divider */}
+              <div className="border-t" />
+
+              {/* Web Search Configuration */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium text-foreground">Web Search Configuration</h3>
+                <p className="text-xs text-muted-foreground">
+                  Optional. Configure Tavily web search as a fallback when documents don't have the answer.
+                </p>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="web-search-enabled"
+                      checked={webSearchEnabled}
+                      onChange={(e) => setWebSearchEnabled(e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300"
+                    />
+                    <label htmlFor="web-search-enabled" className="text-xs text-muted-foreground">
+                      Enable web search
+                    </label>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs text-muted-foreground">Provider</label>
+                    <Input
+                      name="web-search-provider-field"
+                      autoComplete="off"
+                      placeholder="tavily"
+                      value={webSearchProvider}
+                      onChange={(e) => setWebSearchProvider(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs text-muted-foreground">API Key</label>
+                    <div className="relative">
+                      <Input
+                        name="web-search-key-field"
+                        type={showWebSearchKey ? 'text' : 'password'}
+                        autoComplete="off"
+                        placeholder="Enter Tavily API key"
+                        value={webSearchApiKey}
+                        onChange={(e) => setWebSearchApiKey(e.target.value)}
+                        className="pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowWebSearchKey(!showWebSearchKey)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        tabIndex={-1}
+                      >
+                        {showWebSearchKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
                     </div>
                   </div>
