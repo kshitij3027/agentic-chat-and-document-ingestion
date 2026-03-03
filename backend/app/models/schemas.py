@@ -29,6 +29,7 @@ class MessageResponse(BaseModel):
     role: str
     content: str
     sources: list[dict] | None = None
+    tool_calls: list[dict] | None = None
     created_at: datetime
 
 

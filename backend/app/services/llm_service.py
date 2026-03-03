@@ -8,7 +8,7 @@ from app.db.supabase import get_supabase_client
 from app.services.langsmith import get_traced_async_openai_client
 from app.routers.settings import decrypt_value
 
-SYSTEM_PROMPT = """You are a helpful assistant for the RAG Masterclass application.
+_BASE_SYSTEM_PROMPT = """You are a helpful assistant for the RAG Masterclass application.
 You can answer questions and help users with their queries.
 When relevant, search through the uploaded documents to provide accurate information.
 Always cite your sources when using information from documents.
@@ -19,7 +19,30 @@ For general questions like "what do my documents say about X", do NOT use filter
 find the best matches across all documents.
 Available document_type values: meeting_notes, technical_doc, tutorial, report, email, notes, article, other."""
 
-RAG_TOOLS = [{
+
+def get_system_prompt(include_sql: bool = False, include_web_search: bool = False) -> str:
+    parts = [_BASE_SYSTEM_PROMPT]
+
+    if include_sql:
+        from app.services.sql_agent_service import SALES_DATA_SCHEMA
+        parts.append(f"""
+You also have access to a SQL database with structured sales data. Use the query_sales_database tool
+to answer questions about orders, revenue, customers, products, and regions.
+Write standard PostgreSQL queries. Only SELECT queries are allowed.
+
+{SALES_DATA_SCHEMA}""")
+
+    if include_web_search:
+        parts.append("""
+You also have access to web search. Use the web_search tool when the user's question cannot be
+answered from their uploaded documents, or when they explicitly ask for current/online information.
+Always cite the URLs from search results in your response.""")
+
+    parts.append("\nYou have up to 10 tool-calling rounds.")
+    return "\n".join(parts)
+
+
+_SEARCH_DOCUMENTS_TOOL = {
     "type": "function",
     "function": {
         "name": "search_documents",
@@ -44,7 +67,63 @@ RAG_TOOLS = [{
             "required": ["query"]
         }
     }
-}]
+}
+
+_QUERY_SQL_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "query_sales_database",
+        "description": "Query the sales database using SQL. Use this for questions about orders, revenue, customers, products, categories, and regions. Write a PostgreSQL SELECT query.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "sql": {
+                    "type": "string",
+                    "description": "A PostgreSQL SELECT query to run against the sales_data table"
+                }
+            },
+            "required": ["sql"]
+        }
+    }
+}
+
+_WEB_SEARCH_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "web_search",
+        "description": "Search the web for current information. Use this when the user's documents don't contain the answer, or when they ask about recent events or online information.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "The search query"
+                },
+                "max_results": {
+                    "type": "integer",
+                    "description": "Maximum number of results to return (default: 5)",
+                    "default": 5
+                }
+            },
+            "required": ["query"]
+        }
+    }
+}
+
+
+def build_rag_tools(
+    include_search: bool = True,
+    include_sql: bool = False,
+    include_web_search: bool = False,
+) -> list[dict] | None:
+    tools = []
+    if include_search:
+        tools.append(_SEARCH_DOCUMENTS_TOOL)
+    if include_sql:
+        tools.append(_QUERY_SQL_TOOL)
+    if include_web_search:
+        tools.append(_WEB_SEARCH_TOOL)
+    return tools if tools else None
 
 
 def get_global_llm_settings() -> dict[str, Any]:
@@ -81,6 +160,7 @@ async def astream_chat_response(
     messages: list[dict],
     tools: list[dict] | None = None,
     user_id: str | None = None,
+    system_prompt: str | None = None,
 ) -> AsyncGenerator[dict[str, Any], None]:
     """
     Stream a chat response using the ChatCompletions API.
@@ -89,6 +169,7 @@ async def astream_chat_response(
         messages: List of message dicts with 'role' and 'content' keys
         tools: Optional list of tool definitions for function calling
         user_id: Unused, kept for API compatibility
+        system_prompt: Optional system prompt override; defaults to _BASE_SYSTEM_PROMPT
 
     Yields:
         Event dicts with 'type' and additional data
@@ -102,7 +183,7 @@ async def astream_chat_response(
 
     request_kwargs: dict[str, Any] = {
         "model": model,
-        "messages": [{"role": "system", "content": SYSTEM_PROMPT}, *messages],
+        "messages": [{"role": "system", "content": system_prompt or _BASE_SYSTEM_PROMPT}, *messages],
         "stream": True,
     }
     if tools:

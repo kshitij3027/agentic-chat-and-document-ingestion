@@ -52,6 +52,9 @@ class GlobalSettingsResponse(BaseModel):
     embedding_dimensions: int | None = None
     reranker_api_key: str | None = None
     reranker_model: str | None = None
+    web_search_provider: str | None = None
+    web_search_api_key: str | None = None
+    web_search_enabled: bool = False
     has_chunks: bool = False
 
 
@@ -65,6 +68,9 @@ class GlobalSettingsUpdate(BaseModel):
     embedding_dimensions: int | None = None
     reranker_api_key: str | None = None
     reranker_model: str | None = None
+    web_search_provider: str | None = None
+    web_search_api_key: str | None = None
+    web_search_enabled: bool | None = None
 
 
 def mask_api_key(key: str | None) -> str | None:
@@ -119,6 +125,9 @@ async def get_settings(current_user: User = Depends(get_current_user)):
         embedding_dimensions=data.get("embedding_dimensions"),
         reranker_api_key=mask_api_key(decrypt_value(data.get("reranker_api_key"))),
         reranker_model=data.get("reranker_model"),
+        web_search_provider=data.get("web_search_provider"),
+        web_search_api_key=mask_api_key(decrypt_value(data.get("web_search_api_key"))),
+        web_search_enabled=data.get("web_search_enabled", False),
         has_chunks=has_chunks,
     )
 
@@ -180,6 +189,12 @@ async def update_settings(
         update_data["reranker_api_key"] = encrypt_value(settings_data.reranker_api_key) if settings_data.reranker_api_key else None
     if settings_data.reranker_model is not None:
         update_data["reranker_model"] = settings_data.reranker_model or None
+    if settings_data.web_search_provider is not None:
+        update_data["web_search_provider"] = settings_data.web_search_provider or None
+    if settings_data.web_search_api_key is not None and not is_masked_value(settings_data.web_search_api_key):
+        update_data["web_search_api_key"] = encrypt_value(settings_data.web_search_api_key) if settings_data.web_search_api_key else None
+    if settings_data.web_search_enabled is not None:
+        update_data["web_search_enabled"] = settings_data.web_search_enabled
 
     if not update_data:
         # Nothing to update, return current state
@@ -194,6 +209,9 @@ async def update_settings(
             embedding_dimensions=data.get("embedding_dimensions") if data else None,
             reranker_api_key=mask_api_key(decrypt_value(data.get("reranker_api_key"))) if data else None,
             reranker_model=data.get("reranker_model") if data else None,
+            web_search_provider=data.get("web_search_provider") if data else None,
+            web_search_api_key=mask_api_key(decrypt_value(data.get("web_search_api_key"))) if data else None,
+            web_search_enabled=data.get("web_search_enabled", False) if data else False,
             has_chunks=has_chunks,
         )
 
@@ -226,5 +244,8 @@ async def update_settings(
         embedding_dimensions=saved.get("embedding_dimensions"),
         reranker_api_key=mask_api_key(decrypt_value(saved.get("reranker_api_key"))),
         reranker_model=saved.get("reranker_model"),
+        web_search_provider=saved.get("web_search_provider"),
+        web_search_api_key=mask_api_key(decrypt_value(saved.get("web_search_api_key"))),
+        web_search_enabled=saved.get("web_search_enabled", False),
         has_chunks=has_chunks,
     )
