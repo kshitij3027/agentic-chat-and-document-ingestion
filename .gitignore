@@ -43,13 +43,14 @@ supabase/.temp
 backend/=0.0.6
 
 # Testing & QA (contains test credentials)
-verification/
+verification/.env
 screenshots/
 test_data/
 
 # Claude Code
 CLAUDE.md
 .claude/
+.agent/
 
 # Docker
 docker-compose.override.yml

@@ -100,7 +100,7 @@ Technically-minded people who want to build production RAG systems using AI codi
 
 ## Module 5: Multi-Format Support
 
-**Build:** PDF/DOCX/HTML/Markdown via Unstructured or docling, cascade deletes
+**Build:** PDF/DOCX/HTML/Markdown via Unstructured or llamaparse, cascade deletes
 
 **Learn:** Document parsing challenges, format considerations
 

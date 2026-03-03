@@ -39,6 +39,7 @@ async def execute_sql_query(sql: str) -> str:
         ssl_ctx.verify_mode = ssl.CERT_NONE
 
         conn = await asyncpg.connect(dsn=dsn, ssl=ssl_ctx, statement_cache_size=0)
+        await conn.execute("SET ROLE sql_reader")
         rows = await conn.fetch(sql)
 
         if not rows:
@@ -46,13 +47,17 @@ async def execute_sql_query(sql: str) -> str:
 
         return _format_results(rows)
 
-    except asyncpg.InsufficientPrivilegeError:
+    except asyncpg.InsufficientPrivilegeError as e:
+        logger.error("SQL privilege error: %s", e)
         return "Error: Permission denied. Only SELECT queries on sales_data are allowed."
     except asyncpg.PostgresSyntaxError as e:
+        logger.error("SQL syntax error: %s", e)
         return f"Error: SQL syntax error — {e}"
     except asyncpg.UndefinedTableError as e:
+        logger.error("SQL table error: %s", e)
         return f"Error: Table not found — {e}"
     except asyncpg.UndefinedColumnError as e:
+        logger.error("SQL column error: %s", e)
         return f"Error: Column not found — {e}"
     except Exception as e:
         logger.exception("SQL execution error")
