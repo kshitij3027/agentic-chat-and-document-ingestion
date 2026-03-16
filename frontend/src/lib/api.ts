@@ -164,7 +164,7 @@ export async function sendMessage(options: SendMessageOptions): Promise<void> {
             } else if (parsed.content) {
               onTextDelta(parsed.content)
             }
-            if (parsed.error) {
+            if (parsed.error && parsed.type !== 'sub_agent_error') {
               onError(parsed.error)
             }
           } catch {

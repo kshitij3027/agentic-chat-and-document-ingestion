@@ -23,13 +23,13 @@ async def get_full_document_content(
     # Fetch document with ownership check
     result = supabase.table("documents").select("*").eq(
         "id", document_id
-    ).eq("user_id", user_id).maybe_single().execute()
+    ).eq("user_id", user_id).limit(1).execute()
 
     if not result.data:
         logger.warning(f"Document {document_id} not found for user {user_id}")
         return None
 
-    doc = result.data
+    doc = result.data[0]
 
     if doc["status"] != "completed":
         logger.warning(f"Document {document_id} status is '{doc['status']}', not completed")
