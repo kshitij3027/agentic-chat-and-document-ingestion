@@ -387,3 +387,40 @@ stories:
       Check the "Enable web search" checkbox
       Click the "Save" button
       Verify a green "Settings saved successfully." confirmation message appears
+
+  # ── Sub-Agent (Module 8) ────────────────────────────────────────────
+  - name: "Analyze a document using sub-agent"
+    url: "http://localhost:5173"
+    workflow: |
+      Navigate to http://localhost:5173/auth
+      Enter "{{TEST_EMAIL}}" in the Email field
+      Enter "{{TEST_PASSWORD}}" in the Password field
+      Click "Sign In" and wait for the chat page to load
+      Click the "Documents" tab in the sidebar nav
+      Verify at least one document with "completed" status exists (from prior uploads)
+      Note the filename of a completed document
+      Click the "Chat" tab in the sidebar nav
+      Click "New Chat" to create a thread
+      Type "Can you analyze my document and give me a detailed summary? Search for my documents first, then analyze one of them." in the chat input
+      Click the send button
+      Wait for the assistant to begin processing
+      Verify a collapsible steps panel appears showing tool calls with a loading spinner
+      Verify a sub-agent panel appears showing "Analyzing:" followed by a document filename
+      Verify reasoning text streams into the sub-agent panel in real time
+      Wait for the sub-agent to complete (spinner changes to checkmark in the sub-agent panel)
+      Wait for the final assistant response to appear below the panels
+      Verify the assistant response synthesizes the analysis and references the document content
+
+  - name: "Sub-agent handles missing document gracefully"
+    url: "http://localhost:5173"
+    workflow: |
+      Navigate to http://localhost:5173/auth
+      Enter "{{TEST_EMAIL}}" in the Email field
+      Enter "{{TEST_PASSWORD}}" in the Password field
+      Click "Sign In" and wait for the chat page to load
+      Click "New Chat" to create a thread
+      Type "Please analyze the document with ID 00000000-0000-0000-0000-000000000000 and summarize it" in the chat input
+      Click the send button
+      Wait for the assistant response to appear
+      Verify the assistant response mentions that the document was not found or could not be accessed
+      Verify no crash or broken UI state — the chat input is still functional
