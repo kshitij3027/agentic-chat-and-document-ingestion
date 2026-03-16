@@ -30,6 +30,14 @@ export interface Message {
   created_at: string
 }
 
+export interface SubAgentState {
+  active: boolean
+  documentId?: string
+  filename?: string
+  reasoning: string
+  status: 'running' | 'completed' | 'error'
+}
+
 export interface DocumentMetadata {
   topic: string
   document_type: string

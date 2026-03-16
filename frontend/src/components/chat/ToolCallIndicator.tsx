@@ -1,16 +1,18 @@
-import { Search, Database, Globe, Loader2, Check } from 'lucide-react'
+import { Search, Database, Globe, FileSearch, Loader2, Check } from 'lucide-react'
 import type { ToolCallInfo } from '@/types'
 
 const TOOL_ICONS: Record<string, typeof Search> = {
   search_documents: Search,
   query_sales_database: Database,
   web_search: Globe,
+  analyze_document: FileSearch,
 }
 
 const TOOL_LABELS: Record<string, string> = {
   search_documents: 'Searching documents',
   query_sales_database: 'Querying database',
   web_search: 'Searching web',
+  analyze_document: 'Analyzing document',
 }
 
 interface ToolCallIndicatorProps {

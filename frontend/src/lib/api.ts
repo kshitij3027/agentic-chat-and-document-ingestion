@@ -83,13 +83,17 @@ export interface SendMessageOptions {
   onSources?: (sources: Array<{filename: string, document_id: string}>) => void
   onToolCallStart?: (toolName: string, args: string) => void
   onToolCallComplete?: (toolName: string, resultSummary: string) => void
+  onSubAgentStart?: (documentId: string, filename: string, tokenCount: number) => void
+  onSubAgentReasoning?: (content: string) => void
+  onSubAgentComplete?: (result: string) => void
+  onSubAgentError?: (error: string) => void
   onDone: () => void
   onError: (error: string) => void
   signal?: AbortSignal
 }
 
 export async function sendMessage(options: SendMessageOptions): Promise<void> {
-  const { threadId, content, onTextDelta, onSources, onToolCallStart, onToolCallComplete, onDone, onError, signal } = options
+  const { threadId, content, onTextDelta, onSources, onToolCallStart, onToolCallComplete, onSubAgentStart, onSubAgentReasoning, onSubAgentComplete, onSubAgentError, onDone, onError, signal } = options
 
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) {
@@ -147,6 +151,14 @@ export async function sendMessage(options: SendMessageOptions): Promise<void> {
               onToolCallStart(parsed.tool_name, parsed.arguments)
             } else if (parsed.type === 'tool_call_complete' && onToolCallComplete) {
               onToolCallComplete(parsed.tool_name, parsed.result_summary)
+            } else if (parsed.type === 'sub_agent_start' && onSubAgentStart) {
+              onSubAgentStart(parsed.document_id, parsed.filename, parsed.token_count)
+            } else if (parsed.type === 'sub_agent_reasoning' && onSubAgentReasoning) {
+              onSubAgentReasoning(parsed.content)
+            } else if (parsed.type === 'sub_agent_complete' && onSubAgentComplete) {
+              onSubAgentComplete(parsed.result)
+            } else if (parsed.type === 'sub_agent_error' && onSubAgentError) {
+              onSubAgentError(parsed.error)
             } else if (currentEventType === 'sources' && parsed.sources && onSources) {
               onSources(parsed.sources)
             } else if (parsed.content) {

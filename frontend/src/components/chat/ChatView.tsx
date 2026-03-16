@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
 import { Send, Square, Loader2, FileText } from 'lucide-react'
 import { StepsPanel } from './StepsPanel'
+import { SubAgentPanel } from './SubAgentPanel'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { getMessages, sendMessage, updateThread } from '@/lib/api'
-import type { Message, MessageSource, ToolCallInfo } from '@/types'
+import type { Message, MessageSource, ToolCallInfo, SubAgentState } from '@/types'
 
 interface ChatViewProps {
   threadId: string
@@ -23,6 +24,7 @@ export function ChatView({ threadId, onThreadTitleUpdate, initialMessage }: Chat
   const [streamingContent, setStreamingContent] = useState('')
   const [streamingSources, setStreamingSources] = useState<MessageSource[]>([])
   const [streamingToolCalls, setStreamingToolCalls] = useState<ToolCallInfo[]>([])
+  const [streamingSubAgent, setStreamingSubAgent] = useState<SubAgentState | null>(null)
   const [error, setError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
@@ -71,6 +73,7 @@ export function ChatView({ threadId, onThreadTitleUpdate, initialMessage }: Chat
     setStreamingContent('')
     setStreamingSources([])
     setStreamingToolCalls([])
+    setStreamingSubAgent(null)
     setError(null)
 
     abortControllerRef.current = new AbortController()
@@ -123,6 +126,31 @@ export function ChatView({ threadId, onThreadTitleUpdate, initialMessage }: Chat
                 ? { ...tc, status: 'completed' as const, result_summary: resultSummary }
                 : tc
             )
+          )
+        },
+        onSubAgentStart: (_documentId, filename) => {
+          setWaiting(false)
+          setStreamingSubAgent({
+            active: true,
+            documentId: _documentId,
+            filename,
+            reasoning: '',
+            status: 'running',
+          })
+        },
+        onSubAgentReasoning: (content) => {
+          setStreamingSubAgent(prev =>
+            prev ? { ...prev, reasoning: prev.reasoning + content } : prev
+          )
+        },
+        onSubAgentComplete: () => {
+          setStreamingSubAgent(prev =>
+            prev ? { ...prev, status: 'completed' as const, active: false } : prev
+          )
+        },
+        onSubAgentError: (err) => {
+          setStreamingSubAgent(prev =>
+            prev ? { ...prev, status: 'error' as const, reasoning: prev.reasoning + '\n\nError: ' + err, active: false } : prev
           )
         },
         onDone: () => {
@@ -252,7 +280,12 @@ export function ChatView({ threadId, onThreadTitleUpdate, initialMessage }: Chat
 
               {/* Streaming tool calls */}
               {streamingToolCalls.length > 0 && !streamingContent && (
-                <StepsPanel toolCalls={streamingToolCalls} />
+                <>
+                  <StepsPanel toolCalls={streamingToolCalls} />
+                  {streamingSubAgent && (
+                    <SubAgentPanel subAgent={streamingSubAgent} />
+                  )}
+                </>
               )}
 
               {/* Loading indicator */}
@@ -268,6 +301,9 @@ export function ChatView({ threadId, onThreadTitleUpdate, initialMessage }: Chat
                 <div>
                   {streamingToolCalls.length > 0 && (
                     <StepsPanel toolCalls={streamingToolCalls} />
+                  )}
+                  {streamingSubAgent && (
+                    <SubAgentPanel subAgent={streamingSubAgent} />
                   )}
                   <div className="prose prose-neutral dark:prose-invert max-w-none">
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>
