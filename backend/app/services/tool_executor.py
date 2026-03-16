@@ -1,14 +1,17 @@
 """Tool execution dispatcher."""
 import json
 import logging
+from typing import AsyncGenerator
+
 from app.services.retrieval_service import search_documents
 from app.services.sql_agent_service import execute_sql_query
 from app.services.web_search_service import web_search, format_search_results
+from app.services.sub_agent_service import run_sub_agent
 
 logger = logging.getLogger(__name__)
 
 
-async def execute_tool_call(tool_call: dict, user_id: str) -> dict:
+async def execute_tool_call(tool_call: dict, user_id: str) -> dict | AsyncGenerator:
     """
     Execute a tool call and return text for the LLM plus source metadata.
 
@@ -79,6 +82,15 @@ async def execute_tool_call(tool_call: dict, user_id: str) -> dict:
         formatted = format_search_results(results)
         return {"text": formatted, "sources": []}
 
+    if name == "analyze_document":
+        document_id = arguments.get("document_id", "")
+        query = arguments.get("query", "")
+        if not document_id:
+            return {"text": "Error: No document_id provided.", "sources": []}
+        if not query:
+            return {"text": "Error: No analysis query provided.", "sources": []}
+        return run_sub_agent(document_id, user_id, query)
+
     logger.warning(f"Unknown tool: {name}")
     return {"text": f"Error: Unknown tool '{name}'", "sources": []}
 
@@ -106,5 +118,8 @@ def get_result_summary(tool_name: str, result_text: str) -> str:
         # Count numbered results (lines starting with "N.")
         count = sum(1 for line in result_text.split("\n") if line and line[0].isdigit() and ". " in line)
         return f"{count} results" if count else "no results"
+
+    if tool_name == "analyze_document":
+        return "analysis complete"
 
     return "completed"

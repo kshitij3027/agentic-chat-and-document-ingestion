@@ -38,6 +38,14 @@ You also have access to web search. Use the web_search tool when the user's ques
 answered from their uploaded documents, or when they explicitly ask for current/online information.
 Always cite the URLs from search results in your response.""")
 
+    parts.append("""
+You also have access to analyze_document for in-depth analysis of a specific document.
+Use search_documents first to find relevant documents and get their document_id, then use
+analyze_document when the user asks for a detailed analysis, full summary, or comprehensive
+review of a particular document. The document_id parameter must be a UUID from search_documents
+results, NOT a filename. Do not use analyze_document for simple questions — search_documents
+is faster for those.""")
+
     parts.append("\nYou have up to 10 tool-calling rounds.")
     return "\n".join(parts)
 
@@ -87,6 +95,28 @@ _QUERY_SQL_TOOL = {
     }
 }
 
+_ANALYZE_DOCUMENT_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "analyze_document",
+        "description": "Analyze a specific document in depth. Use this when the user asks to summarize, review, or extract detailed information from ONE specific document. This spawns a sub-agent that reads the full document content. Requires the document_id UUID from a previous search_documents result.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "document_id": {
+                    "type": "string",
+                    "description": "The UUID of the document to analyze (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx). IMPORTANT: This must be the document_id UUID from search_documents results, NOT the filename."
+                },
+                "query": {
+                    "type": "string",
+                    "description": "What to analyze or extract from the document (e.g., 'summarize', 'extract key points', 'what are the main arguments?')"
+                }
+            },
+            "required": ["document_id", "query"]
+        }
+    }
+}
+
 _WEB_SEARCH_TOOL = {
     "type": "function",
     "function": {
@@ -119,6 +149,7 @@ def build_rag_tools(
     tools = []
     if include_search:
         tools.append(_SEARCH_DOCUMENTS_TOOL)
+        tools.append(_ANALYZE_DOCUMENT_TOOL)
     if include_sql:
         tools.append(_QUERY_SQL_TOOL)
     if include_web_search:

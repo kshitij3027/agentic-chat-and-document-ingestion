@@ -1,3 +1,4 @@
+import inspect
 import json
 from fastapi import APIRouter, Depends, HTTPException, status
 from starlette.responses import StreamingResponse
@@ -149,15 +150,40 @@ async def send_message(
                             yield f"data: {start_data}\n\n"
 
                             result = await execute_tool_call(tc, current_user.id)
-                            current_messages.append({
-                                "role": "tool",
-                                "tool_call_id": tc["id"],
-                                "content": result["text"],
-                            })
-                            collected_sources.extend(result["sources"])
+
+                            if inspect.isasyncgen(result):
+                                # Sub-agent path: iterate events and forward to frontend
+                                sub_agent_result_text = ""
+                                try:
+                                    async for event in result:
+                                        event_data = json.dumps(event)
+                                        yield f"data: {event_data}\n\n"
+                                        if event.get("type") == "sub_agent_complete":
+                                            sub_agent_result_text = event.get("result", "")
+                                        elif event.get("type") == "sub_agent_error":
+                                            sub_agent_result_text = f"Error analyzing document: {event.get('error', 'unknown error')}"
+                                except Exception as e:
+                                    sub_agent_result_text = f"Error during document analysis: {str(e)}"
+                                    error_data = json.dumps({"type": "sub_agent_error", "error": str(e)})
+                                    yield f"data: {error_data}\n\n"
+
+                                current_messages.append({
+                                    "role": "tool",
+                                    "tool_call_id": tc["id"],
+                                    "content": sub_agent_result_text,
+                                })
+                                summary = get_result_summary(tc["name"], sub_agent_result_text)
+                            else:
+                                # Normal tool path: dict with text and sources
+                                current_messages.append({
+                                    "role": "tool",
+                                    "tool_call_id": tc["id"],
+                                    "content": result["text"],
+                                })
+                                collected_sources.extend(result["sources"])
+                                summary = get_result_summary(tc["name"], result["text"])
 
                             # Emit tool_call_complete
-                            summary = get_result_summary(tc["name"], result["text"])
                             complete_data = json.dumps({"type": "tool_call_complete", "tool_name": tc["name"], "result_summary": summary})
                             yield f"data: {complete_data}\n\n"
 
