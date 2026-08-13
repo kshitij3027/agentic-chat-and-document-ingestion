@@ -72,4 +72,3 @@ Do not commit `.env` files or secrets.
 - [PRD.md](PRD.md) — Product requirements and module overview.
 - [IMPLEMENTATION_GUIDE.md](IMPLEMENTATION_GUIDE.md) — Architecture and implementation details.
 
-This starter is based on the Agentic RAG Masterclass.
